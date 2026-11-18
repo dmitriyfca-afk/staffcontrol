@@ -1,0 +1,2670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FALCON CLUB — Staff Control</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fonts: Century Gothic & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.cdnfonts.com/css/century-gothic" rel="stylesheet" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Century Gothic"', 'CenturyGothic', 'Inter', '-apple-system', 'sans-serif'],
+            brand: ['"Century Gothic"', 'CenturyGothic', 'Inter', 'sans-serif'],
+            num: ['Inter', 'sans-serif']
+          },
+          colors: {
+            fc: {
+              bg: '#0B0D10',
+              card: '#14171D',
+              surface: '#1B1F27',
+              border: '#232833',
+              gold: '#D7A876',
+              goldLight: '#E8C9A3',
+              burgundy: '#701C45',
+              burgundyBright: '#AE3160'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #060709;
+      color: #F4F5F7;
+      font-family: 'Century Gothic', CenturyGothic, 'Inter', -apple-system, sans-serif;
+    }
+    .app-shell {
+      max-width: 100%;
+      margin: 0 auto;
+      min-height: 100vh;
+      background-color: #0B0D10;
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
+    }
+    @media (min-width: 768px) {
+      .app-shell {
+        border-left: 1px solid #232833;
+        border-right: 1px solid #232833;
+      }
+    }
+    .glass-header {
+      background: rgba(20, 23, 29, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .fc-burgundy-grad {
+      background: radial-gradient(circle at 23.4% 50%, #AE3160 0%, #701C45 100%);
+    }
+    .fc-gold-grad {
+      background: linear-gradient(135deg, #D7A876 0%, #B88652 100%);
+    }
+    .safe-pb {
+      padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    }
+    .tab-bar-safe {
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) sepia(40%) saturate(400%) hue-rotate(5deg);
+      cursor: pointer;
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #0B0D10; }
+    ::-webkit-scrollbar-thumb { background: #232833; border-radius: 4px; }
+  </style>
+</head>
+<body class="antialiased selection:bg-fc-gold selection:text-fc-bg">
+
+  <!-- Toast уведомления -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[90] w-full max-w-[440px] px-4 flex flex-col gap-2 pointer-events-none"></div>
+
+  <div class="app-shell flex flex-col relative">
+
+    <!-- ===================================================================== -->
+    <!-- 1. ЭКРАН АВТОРИЗАЦИИ ПО ПЕРСОНАЛЬНОМУ ИНВАЙТ-КОДУ                      -->
+    <!-- ===================================================================== -->
+    <section id="screen-auth" class="flex-1 flex flex-col justify-center p-5">
+      <div class="bg-fc-card border border-fc-border rounded-3xl p-6 shadow-2xl relative overflow-hidden text-center">
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-fc-burgundy via-fc-gold to-fc-burgundyBright"></div>
+
+        <!-- Логотип Falcon Club -->
+        <div class="w-16 h-16 rounded-full bg-fc-gold p-1 mx-auto mb-3 shadow-lg flex items-center justify-center">
+          <div class="w-full h-full rounded-full fc-burgundy-grad flex items-center justify-center">
+            <svg viewBox="0 0 64 64" class="w-9 h-9 fill-fc-gold" aria-hidden="true">
+              <path d="M14 26C18 14 34 10 46 14C36 18 26 22 20 30C18 28 15 27 14 26Z"/>
+              <path d="M22 32C30 24 44 22 52 24C44 29 33 32 23 35C22 34 22 33 22 32Z"/>
+              <path d="M21 38C30 34 42 34 50 37C41 41 31 42 21 41C21 40 21 39 21 38Z"/>
+              <path d="M19 44C27 43 37 44 45 48C35 51 25 50 18 46C18 45 19 45 19 44Z"/>
+            </svg>
+          </div>
+        </div>
+
+        <h1 class="font-brand text-xl font-bold tracking-[0.26em] text-fc-gold">FALCON CLUB</h1>
+        <p class="text-[11px] uppercase tracking-[0.18em] text-zinc-400 mt-1 mb-6">Staff Control • Учет смен и выплат</p>
+
+        <form id="auth-form" class="space-y-3.5">
+          <div>
+            <label for="code-input" class="sr-only">Персональный код доступа</label>
+            <input type="text" id="code-input" inputmode="numeric" maxlength="6" autocomplete="off"
+              placeholder="••••"
+              class="w-full px-4 py-4 rounded-2xl bg-fc-bg border border-fc-border text-center font-num text-2xl font-bold tracking-[0.45em] text-fc-gold placeholder-zinc-700 focus:outline-none focus:border-fc-gold transition" />
+          </div>
+          <button type="submit"
+            class="w-full py-4 rounded-2xl fc-gold-grad hover:brightness-110 text-fc-bg text-xs font-bold uppercase tracking-wider transition shadow-lg">
+            Войти по коду
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 2. ЭКРАН ПЕРВИЧНОЙ РЕГИСТРАЦИИ ПО ИНВАЙТУ (ФИО + ПОЛ + СОГЛАСИЕ ПД)   -->
+    <!-- ===================================================================== -->
+    <section id="screen-register" class="hidden flex-1 flex-col justify-center p-4">
+      <div class="bg-fc-card border border-fc-border rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-fc-burgundy via-fc-gold to-fc-burgundyBright"></div>
+
+        <div class="flex items-center justify-between mb-3">
+          <span class="px-2.5 py-1 rounded-lg bg-fc-gold/15 border border-fc-gold/40 text-[11px] font-bold text-fc-gold font-num">
+            Инвайт-код: <span id="reg-code-badge">0000</span>
+          </span>
+          <button type="button" onclick="cancelRegistration()" class="text-xs text-zinc-400 hover:text-white underline">
+            Отмена
+          </button>
+        </div>
+
+        <h2 class="text-base font-bold text-white mb-1">Регистрация в системе</h2>
+        <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
+          Укажите полное ФИО и контакты для оформления договора подряда (ГПХ) и пропусков КПП.
+        </p>
+
+        <form id="register-form" class="space-y-3">
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Фамилия *</label>
+            <input type="text" id="reg-last-name" required placeholder="Иванов"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-1">Имя *</label>
+              <input type="text" id="reg-first-name" required placeholder="Алексей"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-1">Отчество *</label>
+              <input type="text" id="reg-middle-name" required placeholder="Сергеевич"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-1">Телефон *</label>
+              <input type="tel" id="reg-phone" required placeholder="+375 (29) 123-45-67"
+                class="w-full px-3 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold font-num" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-zinc-400 mb-1">Telegram @username *</label>
+              <input type="text" id="reg-username" required placeholder="@username"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs sm:text-sm text-fc-gold placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+            </div>
+          </div>
+
+          <!-- Пол и специализация -->
+          <div class="p-3 rounded-2xl bg-fc-bg border border-fc-border space-y-2.5">
+            <label class="block text-[11px] text-zinc-400">Пол и специализация *</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" id="btn-gender-male" onclick="selectRegGender('male')"
+                class="py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-fc-gold/15 border-fc-gold text-fc-gold">
+                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                <span>Парень</span>
+              </button>
+              <button type="button" id="btn-gender-female" onclick="selectRegGender('female')"
+                class="py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-fc-card border-fc-border text-zinc-400">
+                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                <span>Девушка</span>
+              </button>
+            </div>
+
+            <div id="reg-male-role-box" class="p-2.5 rounded-xl bg-fc-gold/10 border border-fc-gold/30 text-xs text-fc-goldLight flex items-center gap-2">
+              <i data-lucide="package" class="w-4 h-4 text-fc-gold shrink-0"></i>
+              <span>Доступны роли: <strong>Универсал</strong> (повышенная ставка) и <strong>Гардеробщик</strong></span>
+            </div>
+
+            <div id="reg-female-role-box" class="hidden p-2.5 rounded-xl bg-fc-burgundy/30 border border-fc-burgundyBright/40 text-xs text-rose-200 flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4 text-fc-gold shrink-0"></i>
+              <span>Специализация закреплена: <strong>Гардеробщица</strong></span>
+            </div>
+          </div>
+
+          <!-- Обязательное согласие на обработку ПД -->
+          <div class="p-3 rounded-2xl bg-fc-bg border border-fc-border">
+            <label class="flex items-start gap-2.5 cursor-pointer select-none">
+              <input type="checkbox" id="reg-pd-consent" onchange="toggleRegSubmit()"
+                class="mt-0.5 w-4 h-4 rounded accent-[#D7A876] cursor-pointer shrink-0" />
+              <span class="text-[11px] text-zinc-300 leading-relaxed">
+                Даю <button type="button" onclick="openModal('modal-pd')" class="text-fc-gold underline font-bold">согласие на обработку персональных данных</button> для оформления договора подряда (ГПХ), учета смен и расчета выплат в FALCON CLUB.
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" id="reg-submit-btn" disabled
+            class="w-full py-3.5 rounded-2xl bg-fc-surface text-zinc-500 border border-fc-border text-xs font-bold uppercase tracking-wider transition cursor-not-allowed">
+            Завершить регистрацию
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 3. ОСНОВНОЕ РАБОЧЕЕ ПРОСТРАНСТВО                                      -->
+    <!-- ===================================================================== -->
+    <div id="app-workspace" class="hidden flex-1 flex flex-col">
+
+      <!-- Sticky Top Header -->
+      <header class="sticky top-0 z-30 glass-header border-b border-fc-border px-4 py-3 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-full bg-fc-gold p-0.5 shrink-0">
+            <div class="w-full h-full rounded-full fc-burgundy-grad flex items-center justify-center">
+              <svg viewBox="0 0 64 64" class="w-5 h-5 fill-fc-gold" aria-hidden="true">
+                <path d="M14 26C18 14 34 10 46 14C36 18 26 22 20 30C18 28 15 27 14 26Z"/>
+                <path d="M22 32C30 24 44 22 52 24C44 29 33 32 23 35C22 34 22 33 22 32Z"/>
+                <path d="M21 38C30 34 42 34 50 37C41 41 31 42 21 41C21 40 21 39 21 38Z"/>
+                <path d="M19 44C27 43 37 44 45 48C35 51 25 50 18 46C18 45 19 45 19 44Z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="min-w-0">
+            <div class="font-brand text-xs font-bold tracking-[0.2em] text-fc-gold">FALCON CLUB</div>
+            <div id="header-user-name" class="text-xs text-zinc-300 truncate">Пользователь</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <span id="role-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border">
+            Универсал
+          </span>
+          <button type="button" onclick="logout()" title="Выйти"
+            class="p-2 rounded-xl bg-fc-bg hover:bg-fc-surface border border-fc-border text-zinc-400 hover:text-white transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Scroll Area -->
+      <main class="flex-1 px-4 pt-4 safe-pb space-y-4">
+
+        <!-- Панель быстрого создания смены (только Координатор) -->
+        <div id="coordinator-bar" class="hidden bg-fc-card border border-fc-gold/40 rounded-2xl p-3.5 flex items-center justify-between gap-2.5 shadow-lg">
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>Управление сменами</span>
+              <span id="header-rates-pill" class="px-1.5 py-0.5 rounded bg-fc-gold/15 text-fc-gold text-[10px] font-num">12 / 9 BYN</span>
+            </div>
+            <p class="text-[11px] text-zinc-400 mt-0.5 truncate">Пр-т Победителей, 20 • АРЕНА / БУТИК КИНО</p>
+          </div>
+          <button type="button" onclick="openCreateModal()"
+            class="px-3.5 py-2.5 rounded-xl fc-gold-grad hover:brightness-110 text-fc-bg text-[11px] font-bold uppercase tracking-wider transition shadow flex items-center gap-1 shrink-0">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Создать</span>
+          </button>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- СЕКЦИЯ 1: РАСПИСАНИЕ СМЕН                                       -->
+        <!-- =============================================================== -->
+        <section id="sec-events" class="space-y-3.5">
+          <div class="flex items-center justify-between">
+            <h2 id="events-heading" class="text-xs font-bold uppercase tracking-widest text-fc-gold">
+              Актуальные мероприятия
+            </h2>
+            <span class="text-[11px] text-zinc-500">Минск</span>
+          </div>
+
+          <!-- Фильтр смен для сотрудника (Все / Мои) -->
+          <div id="staff-events-filter" class="hidden grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-fc-card border border-fc-border">
+            <button type="button" id="filter-ev-all" onclick="setStaffEventFilter('all')"
+              class="py-1.5 rounded-lg text-xs font-bold bg-fc-gold text-fc-bg transition">
+              Все смены
+            </button>
+            <button type="button" id="filter-ev-my" onclick="setStaffEventFilter('my')"
+              class="py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition">
+              Мои записи (<span id="filter-my-count" class="font-num">0</span>)
+            </button>
+          </div>
+
+          <div id="events-list" class="space-y-3.5"></div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- СЕКЦИЯ 2: МОЙ ТАБЕЛЬ И ЗАРПЛАТА В BYN (СОТРУДНИК)               -->к
+        <!-- =============================================================== -->
+        <section id="sec-timesheet" class="hidden space-y-3.5">
+          <div class="bg-fc-card border border-fc-gold/40 rounded-2xl p-4 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 inset-x-0 h-1 fc-gold-grad"></div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-fc-gold flex items-center gap-1.5">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+                <span>Расчёт выплат (BYN)</span>
+              </span>
+              <span id="ts-rates-info" class="text-[10px] text-zinc-400 font-num">12.00 / 9.00 BYN/ч</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border text-center">
+                <div class="text-[10px] text-zinc-400">Смен</div>
+                <div id="ts-stat-shifts" class="font-num text-base font-bold text-white mt-0.5">0</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border text-center">
+                <div class="text-[10px] text-zinc-400">Отработано</div>
+                <div id="ts-stat-hours" class="font-num text-base font-bold text-fc-goldLight mt-0.5">0 ч</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-gold/40 text-center">
+                <div class="text-[10px] text-zinc-400">Итого (BYN)</div>
+                <div id="ts-stat-pay" class="font-num text-base font-bold text-emerald-400 mt-0.5">0.00</div>
+              </div>
+            </div>
+
+            <div id="ts-bonus-banner" class="hidden mb-3 px-3 py-2 rounded-xl bg-fc-bg border border-fc-border text-xs text-zinc-200 flex items-center justify-between"></div>
+
+            <div class="p-2.5 rounded-xl bg-fc-burgundy/25 border border-fc-burgundyBright/30 text-[11px] text-zinc-300 flex items-start gap-2 leading-relaxed">
+              <i data-lucide="info" class="w-4 h-4 text-fc-gold shrink-0 mt-0.5"></i>
+              <span>Сумма рассчитывается автоматически по отработанным часам и ставке роли с учётом премий или корректировок координатора.</span>
+            </div>
+          </div>
+
+          <div class="bg-fc-card border border-fc-border rounded-2xl p-4 shadow-xl space-y-2.5">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-fc-gold flex items-center gap-1.5">
+              <i data-lucide="clock-4" class="w-4 h-4"></i>
+              <span>История смен и чекинов</span>
+            </h4>
+            <div id="ts-history-list" class="space-y-2"></div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- СЕКЦИЯ 3: ПРОФИЛЬ СОТРУДНИКА                                    -->
+        <!-- =============================================================== -->
+        <section id="sec-profile" class="hidden space-y-3.5">
+          <div class="bg-fc-card border border-fc-border rounded-2xl p-4 shadow-xl space-y-3.5">
+            <div class="flex items-start justify-between gap-2.5 pb-3.5 border-b border-fc-border">
+              <div class="flex items-center gap-3 min-w-0">
+                <div id="prof-avatar" class="w-12 h-12 rounded-2xl fc-burgundy-grad border border-fc-gold/50 flex items-center justify-center text-fc-gold font-bold text-sm shrink-0">
+                  FC
+                </div>
+                <div class="min-w-0">
+                  <h3 id="prof-fullname" class="text-sm font-bold text-white truncate">Сотрудник</h3>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-zinc-400">
+                    <span id="prof-username" class="text-fc-gold font-semibold">@username</span>
+                    <span>•</span>
+                    <span id="prof-role-tag" class="text-emerald-400 font-bold">Универсал</span>
+                  </div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] text-emerald-300 shrink-0">
+                ПД ОК
+              </span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-fc-bg border border-fc-border flex items-center justify-between">
+              <div>
+                <div class="text-[10px] text-zinc-400 uppercase tracking-wider">Ваш персональный код</div>
+                <div id="prof-code" class="font-num text-lg font-bold text-fc-gold tracking-widest mt-0.5">0000</div>
+              </div>
+              <button type="button" onclick="copyMyCode()"
+                class="px-3 py-2 rounded-xl bg-fc-card hover:bg-fc-surface border border-fc-border text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                <i data-lucide="copy" class="w-3.5 h-3.5 text-fc-gold"></i>
+                <span>Копировать</span>
+              </button>
+            </div>
+
+            <form id="prof-phone-form" class="flex items-end gap-2">
+              <div class="flex-1">
+                <label class="block text-[10px] text-zinc-400 mb-1">Контактный телефон</label>
+                <input type="tel" id="prof-phone-input"
+                  class="w-full px-3 py-2 rounded-xl bg-fc-bg border border-fc-border text-xs text-white font-num focus:outline-none focus:border-fc-gold" />
+              </div>
+              <button type="submit"
+                class="px-3.5 py-2 rounded-xl fc-gold-grad hover:brightness-110 text-fc-bg text-[11px] font-bold uppercase tracking-wider">
+                Сохранить
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- СЕКЦИЯ 4: КОМАНДА, ИНВАЙТЫ И УВОЛЬНЕНИЯ (КООРДИНАТОР)           -->
+        <!-- =============================================================== -->
+        <section id="sec-team" class="hidden space-y-3.5">
+          <div class="bg-fc-card border border-fc-border rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-widest text-fc-gold">Команда и инвайт-коды</h3>
+              <p class="text-[11px] text-zinc-400 mt-0.5">Выдача кодов, просмотр табелей и увольнение.</p>
+            </div>
+            <button type="button" onclick="openInviteModal()"
+              class="px-3.5 py-2.5 rounded-xl fc-burgundy-grad hover:brightness-110 border border-fc-burgundyBright text-white text-[11px] font-bold uppercase tracking-wider transition shadow flex items-center gap-1.5 shrink-0">
+              <i data-lucide="key-round" class="w-3.5 h-3.5 text-fc-gold"></i>
+              <span>+ Выдать код</span>
+            </button>
+          </div>
+
+          <!-- Активные сотрудники -->
+          <div id="team-active-list" class="space-y-2.5"></div>
+
+          <!-- Раскрывающийся архив уволенных сотрудников -->
+          <div id="team-archived-wrapper" class="hidden pt-2">
+            <button type="button" onclick="toggleArchiveSection()"
+              class="w-full p-3.5 rounded-2xl bg-fc-card border border-rose-900/50 hover:border-rose-700/70 flex items-center justify-between text-xs font-bold text-rose-300 transition">
+              <span class="flex items-center gap-2">
+                <i data-lucide="archive" class="w-4 h-4 text-rose-400"></i>
+                <span>Архив уволенных (<span id="archived-count" class="font-num">0</span>)</span>
+              </span>
+              <i id="archive-chevron" data-lucide="chevron-down" class="w-4 h-4 transition-transform"></i>
+            </button>
+            <div id="team-archived-list" class="hidden space-y-2.5 mt-2.5"></div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- СЕКЦИЯ 5: ФИНАНСЫ И ВЕДОМОСТЬ ВЫПЛАТ (КООРДИНАТОР)              -->
+        <!-- =============================================================== -->
+        <section id="sec-finance" class="hidden space-y-3.5">
+          <div class="bg-fc-card border border-fc-border rounded-2xl p-4 shadow-xl space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-fc-gold">Ведомость выплат (BYN)</h3>
+                <p class="text-[11px] text-zinc-400 mt-0.5">Нажмите на сотрудника для правки часов и премий.</p>
+              </div>
+              <button type="button" onclick="copyPayrollReport()"
+                class="px-3 py-1.5 rounded-xl bg-fc-bg hover:bg-fc-surface border border-fc-gold/50 text-[11px] font-bold text-fc-gold flex items-center gap-1 shrink-0">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Отчет</span>
+              </button>
+            </div>
+
+            <div class="p-3 rounded-xl bg-fc-bg border border-fc-gold/30 flex items-center justify-between">
+              <span class="text-xs text-zinc-400">Итого фонд оплаты:</span>
+              <span id="finance-total-fund" class="font-num text-base font-bold text-emerald-400">0.00 BYN</span>
+            </div>
+
+            <div id="finance-payroll-list" class="space-y-2"></div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- СЕКЦИЯ 6: НАСТРОЙКИ СТАВОК И TELEGRAM BOT API (КООРДИНАТОР)     -->
+        <!-- =============================================================== -->
+        <section id="sec-settings" class="hidden space-y-3.5">
+          <!-- Настройка почасовых ставок BYN -->
+          <div class="bg-fc-card border border-fc-gold/40 rounded-2xl p-4 shadow-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-fc-gold">Почасовые ставки (BYN / ч)</h3>
+                <p class="text-[11px] text-zinc-400 mt-0.5">Мгновенно пересчитывают табели всех сотрудников.</p>
+              </div>
+              <i data-lucide="calculator" class="w-5 h-5 text-fc-gold"></i>
+            </div>
+
+            <form id="rates-form" class="space-y-2.5">
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[10px] text-zinc-400 mb-1">Универсал (BYN/ч)</label>
+                  <input type="number" step="0.1" min="0" id="rate-univ-input" required
+                    class="w-full px-3 py-2 rounded-xl bg-fc-bg border border-fc-border font-num text-sm font-bold text-fc-gold focus:outline-none focus:border-fc-gold" />
+                </div>
+                <div>
+                  <label class="block text-[10px] text-zinc-400 mb-1">Гардероб (BYN/ч)</label>
+                  <input type="number" step="0.1" min="0" id="rate-ward-input" required
+                    class="w-full px-3 py-2 rounded-xl bg-fc-bg border border-fc-border font-num text-sm font-bold text-rose-300 focus:outline-none focus:border-fc-gold" />
+                </div>
+              </div>
+              <button type="submit"
+                class="w-full py-2.5 rounded-xl fc-gold-grad hover:brightness-110 text-fc-bg text-xs font-bold uppercase tracking-wider shadow">
+                Сохранить ставки
+              </button>
+            </form>
+          </div>
+
+          <!-- Интеграция автопостинга в Telegram-канал -->
+          <div class="bg-fc-card border border-fc-border rounded-2xl p-4 shadow-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-fc-gold">Автопостинг в Telegram-канал</h3>
+                <p class="text-[11px] text-zinc-400 mt-0.5">Анонс новой смены отправляется сразу при публикации.</p>
+              </div>
+              <i data-lucide="send" class="w-5 h-5 text-sky-400"></i>
+            </div>
+
+            <form id="tg-settings-form" class="space-y-2.5">
+              <div>
+                <label class="block text-[10px] text-zinc-400 mb-1">HTTP API Token бота (@BotFather)</label>
+                <input type="password" id="tg-bot-token" placeholder="7123456789:AAH..."
+                  class="w-full px-3 py-2 rounded-xl bg-fc-bg border border-fc-border font-num text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+              </div>
+              <div>
+                <label class="block text-[10px] text-zinc-400 mb-1">ID канала (@channel или -100...)</label>
+                <input type="text" id="tg-channel-id" placeholder="@falcon_club_shifts"
+                  class="w-full px-3 py-2 rounded-xl bg-fc-bg border border-fc-border font-num text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+              </div>
+              <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border text-[11px] text-zinc-400 leading-relaxed">
+                Добавьте бота в администраторы канала с правом публикации сообщений. Если поля пустые, смены публикуются локально без отправки в Telegram.
+              </div>
+              <button type="submit"
+                class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold uppercase tracking-wider shadow">
+                Сохранить настройки Telegram
+              </button>
+            </form>
+          </div>
+
+          <!-- Полная очистка базы данных -->
+          <div class="bg-fc-card border border-rose-900/40 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-bold text-zinc-200">Очистить локальную базу</div>
+              <p class="text-[11px] text-zinc-500 mt-0.5">Удалить все смены и сотрудников, оставив только координатора.</p>
+            </div>
+            <button type="button" onclick="resetDatabase()"
+              class="px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 border border-rose-800/60 text-rose-300 text-xs font-bold shrink-0">
+              Сбросить базу
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <!-- =================================================================== -->
+      <!-- НИЖНЯЯ НАВИГАЦИЯ (MOBILE TAB BAR)                                   -->
+      <!-- =================================================================== -->
+      <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[100%] z-30 glass-header border-t border-fc-border tab-bar-safe">
+        <!-- Табы Сотрудника (3 вкладки) -->
+        <div id="nav-staff-group" class="px-3 pt-2 grid grid-cols-3 gap-1">
+          <button type="button" id="tab-staff-events" onclick="switchTab('events')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-fc-gold transition">
+            <i data-lucide="calendar-days" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Смены</span>
+          </button>
+          <button type="button" id="tab-staff-timesheet" onclick="switchTab('timesheet')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition">
+            <i data-lucide="wallet-cards" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Мой табель</span>
+          </button>
+          <button type="button" id="tab-staff-profile" onclick="switchTab('profile')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition">
+            <i data-lucide="user-circle-2" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Профиль</span>
+          </button>
+        </div>
+
+        <!-- Табы Координатора (4 вкладки) -->
+        <div id="nav-admin-group" class="hidden px-2 pt-2 grid grid-cols-4 gap-1">
+          <button type="button" id="tab-admin-events" onclick="switchTab('events')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-fc-gold transition">
+            <i data-lucide="calendar-days" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Смены</span>
+          </button>
+          <button type="button" id="tab-admin-team" onclick="switchTab('team')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition">
+            <div class="relative">
+              <i data-lucide="users" class="w-5 h-5"></i>
+              <span id="badge-team-count" class="font-num absolute -top-1.5 -right-2.5 px-1.5 py-0.2 rounded-full bg-fc-gold text-fc-bg text-[9px] font-bold">0</span>
+            </div>
+            <span class="text-[10px] font-bold">Команда</span>
+          </button>
+          <button type="button" id="tab-admin-finance" onclick="switchTab('finance')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition">
+            <i data-lucide="banknote" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Финансы</span>
+          </button>
+          <button type="button" id="tab-admin-settings" onclick="switchTab('settings')"
+            class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition">
+            <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Настройки</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО: СОЗДАНИЕ МЕРОПРИЯТИЯ (3 ФОРМАТА + АВТОПОСТИНГ TG)     -->
+  <!-- ===================================================================== -->
+  <div id="modal-create" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-fc-card border border-fc-gold/50 rounded-3xl max-w-[440px] w-full p-5 shadow-2xl my-auto">
+      <div class="flex items-center justify-between mb-3.5">
+        <h3 class="text-base font-bold text-white">Новое мероприятие</h3>
+        <button type="button" onclick="closeModal('modal-create')" class="p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="create-form" class="space-y-3">
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">Название и площадка *</label>
+          <input type="text" id="create-title" required placeholder="Например: Концерт в FALCON CLUB АРЕНА"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Дата *</label>
+            <input type="date" id="create-date" required
+              class="w-full px-3 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs sm:text-sm text-white focus:outline-none focus:border-fc-gold font-num" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Время смены *</label>
+            <input type="text" id="create-time" required placeholder="17:30 – 23:30"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold font-num" />
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-fc-bg border border-fc-border space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-fc-gold mb-1.5">Формат персонала *</label>
+            <div class="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-fc-card border border-fc-border">
+              <button type="button" id="fmt-btn-both" onclick="setCreateFormat('both')"
+                class="py-2 px-1.5 rounded-lg text-[10px] font-bold transition bg-fc-gold text-fc-bg">
+                Оба направления
+              </button>
+              <button type="button" id="fmt-btn-universal" onclick="setCreateFormat('universal')"
+                class="py-2 px-1.5 rounded-lg text-[10px] font-bold transition text-zinc-400 hover:text-white">
+                Только универсалы
+              </button>
+              <button type="button" id="fmt-btn-wardrobe" onclick="setCreateFormat('wardrobe')"
+                class="py-2 px-1.5 rounded-lg text-[10px] font-bold transition text-zinc-400 hover:text-white">
+                Только гардероб
+              </button>
+            </div>
+          </div>
+
+          <div id="create-quotas-grid" class="grid grid-cols-2 gap-2.5">
+            <div id="quota-box-universal">
+              <label class="block text-[11px] text-zinc-300 mb-1">Квота универсалов</label>
+              <input type="number" id="create-univ-quota" min="1" max="100" value="4"
+                class="w-full px-3 py-2 rounded-xl bg-fc-card border border-fc-border font-num text-sm font-bold text-fc-gold focus:outline-none focus:border-fc-gold" />
+            </div>
+            <div id="quota-box-wardrobe">
+              <label class="block text-[11px] text-zinc-300 mb-1">Квота гардероба</label>
+              <input type="number" id="create-ward-quota" min="1" max="100" value="4"
+                class="w-full px-3 py-2 rounded-xl bg-fc-card border border-fc-border font-num text-sm font-bold text-rose-300 focus:outline-none focus:border-fc-gold" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">Брифинг (дресс-код, Пр-т Победителей, 20)</label>
+          <textarea id="create-desc" rows="2" placeholder="Форма: Total Black. Сбор у служебного входа за 30 мин."
+            class="w-full px-3.5 py-2 rounded-xl bg-fc-bg border border-fc-border text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold resize-none"></textarea>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-fc-bg border border-fc-border flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <i data-lucide="send" class="w-4 h-4 text-sky-400 shrink-0"></i>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-white">Анонс в Telegram-канал</div>
+              <div id="create-tg-status" class="text-[10px] text-zinc-400 truncate">Настроить токен в «Настройках»</div>
+            </div>
+          </div>
+          <input type="checkbox" id="create-tg-toggle" checked class="w-4 h-4 accent-[#D7A876] cursor-pointer shrink-0" />
+        </div>
+
+        <div class="pt-1 flex gap-2.5">
+          <button type="button" onclick="closeModal('modal-create')"
+            class="flex-1 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs font-bold uppercase tracking-wider text-zinc-300">
+            Отмена
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl fc-gold-grad text-fc-bg text-xs font-bold uppercase tracking-wider shadow-lg">
+            Опубликовать
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО: ВЫБОР ПОЗИЦИИ ПРИ ЗАПИСИ ДЛЯ ПАРНЯ (ЕСЛИ ОБА ФОРМАТА) -->
+  <!-- ===================================================================== -->
+  <div id="modal-pick-role" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-fc-card border border-fc-gold/50 rounded-3xl max-w-[400px] w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-1.5">
+        <h3 class="text-base font-bold text-white">Выбор роли на смену</h3>
+        <button type="button" onclick="closeModal('modal-pick-role')" class="p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p id="pick-event-title" class="text-xs text-fc-gold font-bold mb-1"></p>
+      <p class="text-[11px] text-zinc-400 mb-3.5 leading-relaxed">
+        Почасовая ставка зависит от выбранной позиции на этом мероприятии:
+      </p>
+
+      <div class="space-y-2.5">
+        <button type="button" id="pick-btn-universal" onclick="confirmMaleRoleSignup('universal')"
+          class="w-full p-3.5 rounded-2xl bg-fc-bg hover:bg-fc-surface border border-fc-gold/50 text-left transition flex items-center justify-between gap-2.5">
+          <div>
+            <div class="text-sm font-bold text-white flex items-center gap-2">
+              <span>Универсал</span>
+              <span id="pick-rate-univ" class="font-num px-2 py-0.5 rounded bg-fc-gold/15 text-fc-gold text-[10px]">12.00 BYN/ч</span>
+            </div>
+            <div class="text-[11px] text-zinc-400 mt-0.5">Погрузка / разгрузка + помощь на площадке</div>
+          </div>
+          <span id="pick-left-univ" class="font-num text-xs font-bold text-fc-gold shrink-0">3 места</span>
+        </button>
+
+        <button type="button" id="pick-btn-wardrobe" onclick="confirmMaleRoleSignup('wardrobe')"
+          class="w-full p-3.5 rounded-2xl bg-fc-bg hover:bg-fc-surface border border-fc-burgundyBright/60 text-left transition flex items-center justify-between gap-2.5">
+          <div>
+            <div class="text-sm font-bold text-white flex items-center gap-2">
+              <span>Гардеробщик</span>
+              <span id="pick-rate-ward" class="font-num px-2 py-0.5 rounded bg-fc-burgundy/40 text-rose-200 text-[10px]">9.00 BYN/ч</span>
+            </div>
+            <div class="text-[11px] text-zinc-400 mt-0.5">Работа только в гардеробе</div>
+          </div>
+          <span id="pick-left-ward" class="font-num text-xs font-bold text-rose-300 shrink-0">3 места</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО: ПОЛНЫЙ ТЕКСТ СОГЛАСИЯ НА ОБРАБОТКУ ПД                 -->
+  <!-- ===================================================================== -->
+  <div id="modal-pd" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+    <div class="bg-fc-card border border-fc-gold/50 rounded-3xl max-w-[440px] w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-fc-gold">Согласие на обработку ПД (ГПХ)</h3>
+        <button type="button" onclick="closeModal('modal-pd')" class="p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="max-h-60 overflow-y-auto p-3.5 rounded-2xl bg-fc-bg border border-fc-border text-xs text-zinc-300 space-y-2 leading-relaxed">
+        <p>Я свободно, своей волей и в своем интересе даю согласие <strong>FALCON CLUB</strong> на обработку моих персональных данных (Фамилия, Имя, Отчество, контактный телефон, данные профиля Telegram, сведения о датах и времени оказания услуг).</p>
+        <p><strong>Цели обработки:</strong></p>
+        <ul class="list-disc pl-4 space-y-1 text-zinc-400">
+          <li>Заключение и исполнение договоров подряда (ГПХ) и актов оказанных услуг;</li>
+          <li>Оформление списков доступа через КПП комплекса (Пр-т Победителей, 20);</li>
+          <li>Учет отработанного времени и расчет вознаграждения в BYN.</li>
+        </ul>
+      </div>
+      <button type="button" onclick="acceptPdFromModal()"
+        class="w-full mt-4 py-3 rounded-2xl fc-gold-grad text-fc-bg text-xs font-bold uppercase tracking-wider">
+        Принять согласие
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО: ВЫДАЧА ИНВАЙТ-КОДА (КООРДИНАТОР)                      -->
+  <!-- ===================================================================== -->
+  <div id="modal-invite" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-fc-card border border-fc-gold/50 rounded-3xl max-w-[400px] w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-base font-bold text-white">Выдать инвайт-код</h3>
+        <button type="button" onclick="closeModal('modal-invite')" class="p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-zinc-400 mb-3.5 leading-relaxed">
+        Передайте код сотруднику до регистрации. При первом входе он заполнит ФИО, телефон и примет согласие на ПД.
+      </p>
+
+      <form id="invite-form" class="space-y-3">
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">Персональный код (4 цифры)</label>
+          <div class="flex gap-2">
+            <input type="text" id="inv-code" required maxlength="6"
+              class="flex-1 px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-gold/50 text-center font-num text-lg font-bold tracking-[0.3em] text-fc-gold focus:outline-none" />
+            <button type="button" onclick="regenerateInviteCode()"
+              class="px-3.5 rounded-xl bg-fc-bg hover:bg-fc-surface border border-fc-border text-fc-gold">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">ФИО / Заметка (для кого код) *</label>
+          <input type="text" id="inv-note" required placeholder="Например: Сидорчук Денис"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">Специализация *</label>
+          <select id="inv-gender"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-sm text-white focus:outline-none focus:border-fc-gold">
+            <option value="male">Парень — Универсал / Гардеробщик</option>
+            <option value="female">Девушка — Гардеробщица</option>
+          </select>
+        </div>
+
+        <div class="pt-1 flex gap-2.5">
+          <button type="button" onclick="closeModal('modal-invite')"
+            class="flex-1 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs font-bold uppercase tracking-wider text-zinc-300">
+            Отмена
+          </button>
+          <button type="submit"
+            class="flex-1 py-2.5 rounded-xl fc-gold-grad text-fc-bg text-xs font-bold uppercase tracking-wider shadow-lg">
+            Создать
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО: КПП И УЧЕТ ПО СМЕНЕ                                   -->
+  <!-- ===================================================================== -->
+  <div id="modal-kpp" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-fc-card border border-fc-gold/50 rounded-3xl max-w-[450px] w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="clipboard-check" class="w-5 h-5 text-fc-gold"></i>
+          <span>КПП и учет смены</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-kpp')" class="p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p id="kpp-subtitle" class="text-xs text-fc-gold mb-1"></p>
+      <p class="text-[11px] text-zinc-400 mb-3">Нажмите на ФИО сотрудника для открытия его табеля и расчёта.</p>
+
+      <div id="kpp-list" class="max-h-72 overflow-y-auto space-y-2 pr-1 mb-4"></div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('modal-kpp')"
+          class="px-4 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs font-bold uppercase tracking-wider text-zinc-300">
+          Закрыть
+        </button>
+        <button type="button" onclick="copyKppReport()"
+          class="flex-1 py-2.5 rounded-xl fc-gold-grad hover:brightness-110 text-fc-bg text-xs font-bold uppercase tracking-wider shadow flex items-center justify-center gap-1.5">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>Скопировать список для КПП</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- МОДАЛЬНОЕ ОКНО: ДОСЬЕ И ТАБЕЛЬ СОТРУДНИКА (КООРДИНАТОР)               -->
+  <!-- ===================================================================== -->
+  <div id="modal-dossier" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-fc-card border border-fc-gold/60 rounded-3xl max-w-[460px] w-full p-5 shadow-2xl my-auto">
+      <div class="flex items-start justify-between gap-2.5 pb-3 border-b border-fc-border">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="dos-avatar" class="w-11 h-11 rounded-2xl fc-burgundy-grad border border-fc-gold/50 flex items-center justify-center text-fc-gold font-bold text-sm shrink-0">
+            FC
+          </div>
+          <div class="min-w-0">
+            <h3 id="dos-name" class="text-sm font-bold text-white truncate">Сотрудник</h3>
+            <div id="dos-meta" class="text-[11px] text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5"></div>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modal-dossier')" class="p-1.5 rounded-lg text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 my-3">
+        <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border text-center">
+          <div class="text-[10px] text-zinc-400">Отработано</div>
+          <div id="dos-hours" class="font-num text-sm sm:text-base font-bold text-fc-goldLight mt-0.5">0 ч</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border text-center">
+          <div class="text-[10px] text-zinc-400">По сменам</div>
+          <div id="dos-base-pay" class="font-num text-sm sm:text-base font-bold text-white mt-0.5">0.00 BYN</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-fc-bg border border-emerald-500/40 text-center">
+          <div class="text-[10px] text-zinc-400">Итого к выплате</div>
+          <div id="dos-final-pay" class="font-num text-sm sm:text-base font-bold text-emerald-400 mt-0.5">0.00 BYN</div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-2xl bg-fc-bg border border-fc-border mb-3">
+        <div class="text-[11px] font-bold text-fc-gold mb-1.5">Корректировка / премия координатора (BYN)</div>
+        <div class="grid grid-cols-12 gap-2 items-center">
+          <div class="col-span-4">
+            <input type="number" step="0.5" id="dos-bonus-val" placeholder="0"
+              class="w-full px-2 py-1.5 rounded-xl bg-fc-card border border-fc-border font-num text-xs font-bold text-white text-center focus:outline-none focus:border-fc-gold" />
+          </div>
+          <div class="col-span-5">
+            <input type="text" id="dos-bonus-note" placeholder="Комментарий"
+              class="w-full px-2.5 py-1.5 rounded-xl bg-fc-card border border-fc-border text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-fc-gold" />
+          </div>
+          <div class="col-span-3">
+            <button type="button" onclick="saveDossierBonus()"
+              class="w-full py-1.5 px-2 rounded-xl fc-gold-grad text-fc-bg text-[11px] font-bold uppercase">
+              ОК
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs font-bold uppercase tracking-wider text-fc-gold mb-2">Смены и ручная правка времени (ЧЧ:ММ)</div>
+      <div id="dos-history-list" class="max-h-52 overflow-y-auto space-y-2 pr-1 mb-3.5"></div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('modal-dossier')"
+          class="px-4 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs font-bold uppercase tracking-wider text-zinc-300">
+          Закрыть
+        </button>
+        <button type="button" onclick="copyDossierReport()"
+          class="flex-1 py-2.5 rounded-xl fc-gold-grad hover:brightness-110 text-fc-bg text-xs font-bold uppercase tracking-wider shadow flex items-center justify-center gap-1.5">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>Скопировать табель</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно подтверждения -->
+  <div id="modal-confirm" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-fc-card border border-fc-burgundyBright/60 rounded-3xl max-w-[360px] w-full p-5 shadow-2xl">
+      <h3 id="confirm-title" class="text-base font-bold text-white mb-1.5">Подтверждение</h3>
+      <p id="confirm-text" class="text-xs text-zinc-400 leading-relaxed mb-4"></p>
+      <div class="flex gap-2.5">
+        <button type="button" id="confirm-no" class="flex-1 py-2.5 rounded-xl bg-fc-bg border border-fc-border text-xs font-bold text-zinc-300">
+          Отмена
+        </button>
+        <button type="button" id="confirm-yes" class="flex-1 py-2.5 rounded-xl fc-burgundy-grad text-xs font-bold text-white">
+          Подтвердить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // СОСТОЯНИЕ И ДАННЫЕ FALCON CLUB (БЕЗ ДЕМО-СОТРУДНИКОВ И ДЕМО-СМЕН)
+    // =========================================================================
+    const STORE_USERS = 'fc_sc_users_prod_v1';
+    const STORE_EVENTS = 'fc_sc_events_prod_v1';
+    const STORE_RATES = 'fc_sc_rates_prod_v1';
+    const STORE_TG = 'fc_sc_tg_prod_v1';
+    const STORE_ACTIVE = 'fc_sc_active_prod_v1';
+
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+    let dbUsers = {};
+    let dbEvents = [];
+    let dbRates = { universal: 12.0, wardrobe: 9.0 };
+    let dbTgConfig = { botToken: '', channelId: '' };
+    let activeCode = null;
+    let pendingRegCode = null;
+    let selectedRegGender = 'male';
+    let createFormat = 'both';
+    let currentTab = 'events';
+    let staffEventFilter = 'all';
+    let archiveExpanded = false;
+    let pendingPickEventId = null;
+    let currentKppEventId = null;
+    let currentDossierCode = null;
+
+    function getDateOffset(days) {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDateRu(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+      const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      return `${d} ${months[dt.getMonth()]} (${days[dt.getDay()]})`;
+    }
+
+    function isWithinTwoDays(dateStr) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const evDate = new Date(y, m - 1, d);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diff = Math.round((evDate - today) / (1000 * 60 * 60 * 24));
+      return diff >= 0 && diff <= 2;
+    }
+
+    function getFullName(u) {
+      if (!u) return '';
+      const arr = [u.lastName, u.firstName, u.middleName].filter(Boolean);
+      return arr.length > 0 ? arr.join(' ') : (u.note || 'Сотрудник');
+    }
+
+    function getInitials(u) {
+      if (!u) return 'FC';
+      if (u.lastName && u.firstName) return `${u.lastName[0]}${u.firstName[0]}`.toUpperCase();
+      return (u.note || 'FC').slice(0, 2).toUpperCase();
+    }
+
+    function calcShiftDuration(checkIn, checkOut) {
+      if (!checkIn || !checkOut) return { minutes: 0, label: '—' };
+      const [h1, m1] = checkIn.split(':').map(Number);
+      const [h2, m2] = checkOut.split(':').map(Number);
+      if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return { minutes: 0, label: '—' };
+
+      let s = h1 * 60 + m1;
+      let e = h2 * 60 + m2;
+      if (e < s) e += 24 * 60;
+      const diff = e - s;
+      const hrs = Math.floor(diff / 60);
+      const mins = diff % 60;
+      return { minutes: diff, label: mins > 0 ? `${hrs} ч ${mins} м` : `${hrs} ч` };
+    }
+
+    function formatMinutes(totalMin) {
+      if (!totalMin || totalMin <= 0) return '0 ч';
+      const hrs = Math.floor(totalMin / 60);
+      const mins = totalMin % 60;
+      return mins > 0 ? `${hrs} ч ${mins} м` : `${hrs} ч`;
+    }
+
+    function calcMoney(minutes, shiftRole) {
+      const rate = shiftRole === 'universal' ? Number(dbRates.universal || 0) : Number(dbRates.wardrobe || 0);
+      return (minutes / 60) * rate;
+    }
+
+    // Только мастер-аккаунт координатора (7777), без тестовых сотрудников
+    function initDefaultUsers() {
+      return {
+        '7777': {
+          code: '7777',
+          role: 'admin',
+          gender: 'male',
+          defaultRole: 'admin',
+          lastName: 'Сидорчук',
+          firstName: 'Дмитрий',
+          middleName: 'Андреевич',
+          username: '@falcon_coord',
+          phone: '',
+          pdAccepted: true,
+          registered: true,
+          fired: false,
+          bonusAmount: 0,
+          bonusNote: ''
+        }
+      };
+    }
+
+    // Пустой список смен при инициализации — координатор создает реальные смены сам
+    function initDefaultEvents() {
+      return [];
+    }
+
+    function loadState() {
+      try {
+        const u = localStorage.getItem(STORE_USERS);
+        dbUsers = u ? JSON.parse(u) : initDefaultUsers();
+        if (!u) saveUsers();
+
+        const e = localStorage.getItem(STORE_EVENTS);
+        dbEvents = e ? JSON.parse(e) : initDefaultEvents();
+        if (!e) saveEvents();
+
+        const r = localStorage.getItem(STORE_RATES);
+        dbRates = r ? JSON.parse(r) : { universal: 12.0, wardrobe: 9.0 };
+        if (!r) saveRates();
+
+        const t = localStorage.getItem(STORE_TG);
+        dbTgConfig = t ? JSON.parse(t) : { botToken: '', channelId: '' };
+      } catch (err) {
+        dbUsers = initDefaultUsers();
+        dbEvents = initDefaultEvents();
+        dbRates = { universal: 12.0, wardrobe: 9.0 };
+        dbTgConfig = { botToken: '', channelId: '' };
+      }
+    }
+
+    function saveUsers() { try { localStorage.setItem(STORE_USERS, JSON.stringify(dbUsers)); } catch (e) {} }
+    function saveEvents() { try { localStorage.setItem(STORE_EVENTS, JSON.stringify(dbEvents)); } catch (e) {} }
+    function saveRates() { try { localStorage.setItem(STORE_RATES, JSON.stringify(dbRates)); } catch (e) {} }
+    function saveTgConfig() { try { localStorage.setItem(STORE_TG, JSON.stringify(dbTgConfig)); } catch (e) {} }
+
+    function haptic(type = 'light') {
+      if (!tg || !tg.HapticFeedback) return;
+      try {
+        if (['success', 'error', 'warning'].includes(type)) tg.HapticFeedback.notificationOccurred(type);
+        else tg.HapticFeedback.impactOccurred(type);
+      } catch (e) {}
+    }
+
+    function showToast(msg, type = 'success') {
+      const box = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const style = type === 'error'
+        ? 'border-fc-burgundyBright text-rose-200'
+        : type === 'info'
+        ? 'border-sky-500/60 text-sky-200'
+        : 'border-fc-gold/60 text-fc-goldLight';
+      const iconName = type === 'error' ? 'alert-circle' : type === 'info' ? 'info' : 'check-circle-2';
+      el.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-2xl bg-fc-card/95 backdrop-blur border ${style} shadow-2xl text-xs font-bold transition-all duration-300 opacity-0 -translate-y-2`;
+      el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4 text-fc-gold shrink-0"></i><span>${msg}</span>`;
+      box.appendChild(el);
+      lucide.createIcons({ nodes: [el] });
+      requestAnimationFrame(() => el.classList.remove('opacity-0', '-translate-y-2'));
+      setTimeout(() => {
+        el.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => el.remove(), 300);
+      }, 3000);
+    }
+
+    function askConfirm(title, text, onYes) {
+      haptic('warning');
+      const modal = document.getElementById('modal-confirm');
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-text').textContent = text;
+      const yesBtn = document.getElementById('confirm-yes');
+      const noBtn = document.getElementById('confirm-no');
+
+      const close = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        yesBtn.onclick = null;
+        noBtn.onclick = null;
+      };
+      yesBtn.onclick = () => { close(); onYes(); };
+      noBtn.onclick = close;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // =========================================================================
+    // 1. АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
+    // =========================================================================
+    window.loginWithCode = function(raw) {
+      const code = String(raw || '').trim();
+      if (!code) {
+        haptic('error');
+        showToast('Введите персональный код', 'error');
+        return;
+      }
+      const user = dbUsers[code];
+      if (!user) {
+        haptic('error');
+        showToast('Код не найден в системе', 'error');
+        return;
+      }
+      if (user.fired) {
+        haptic('error');
+        showToast('Доступ заблокирован: сотрудник уволен и перенесён в архив', 'error');
+        return;
+      }
+
+      if (!user.registered && user.role !== 'admin') {
+        pendingRegCode = code;
+        document.getElementById('reg-code-badge').textContent = code;
+        document.getElementById('reg-last-name').value = '';
+        document.getElementById('reg-first-name').value = '';
+        document.getElementById('reg-middle-name').value = '';
+        document.getElementById('reg-phone').value = '';
+        document.getElementById('reg-username').value = '';
+        document.getElementById('reg-pd-consent').checked = false;
+        toggleRegSubmit();
+        selectRegGender(user.gender || 'male');
+
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+          const u = tg.initDataUnsafe.user;
+          if (u.last_name) document.getElementById('reg-last-name').value = u.last_name;
+          if (u.first_name) document.getElementById('reg-first-name').value = u.first_name;
+          if (u.username) document.getElementById('reg-username').value = '@' + u.username;
+        }
+
+        document.getElementById('screen-auth').classList.add('hidden');
+        const reg = document.getElementById('screen-register');
+        reg.classList.remove('hidden');
+        reg.classList.add('flex');
+        lucide.createIcons();
+        haptic('light');
+        return;
+      }
+
+      activeCode = code;
+      try { localStorage.setItem(STORE_ACTIVE, code); } catch (e) {}
+      haptic('success');
+      enterWorkspace();
+    };
+
+    document.getElementById('auth-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const inp = document.getElementById('code-input');
+      loginWithCode(inp.value);
+      inp.value = '';
+    });
+
+    window.selectRegGender = function(gender) {
+      selectedRegGender = gender;
+      const mBtn = document.getElementById('btn-gender-male');
+      const fBtn = document.getElementById('btn-gender-female');
+      const mBox = document.getElementById('reg-male-role-box');
+      const fBox = document.getElementById('reg-female-role-box');
+
+      if (gender === 'male') {
+        mBtn.className = 'py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-fc-gold/15 border-fc-gold text-fc-gold';
+        fBtn.className = 'py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-fc-card border-fc-border text-zinc-400';
+        mBox.classList.remove('hidden');
+        fBox.classList.add('hidden');
+      } else {
+        fBtn.className = 'py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-fc-burgundy/40 border-fc-burgundyBright text-rose-200';
+        mBtn.className = 'py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-fc-card border-fc-border text-zinc-400';
+        mBox.classList.add('hidden');
+        fBox.classList.remove('hidden');
+      }
+    };
+
+    window.toggleRegSubmit = function() {
+      const ok = document.getElementById('reg-pd-consent').checked;
+      const btn = document.getElementById('reg-submit-btn');
+      btn.disabled = !ok;
+      btn.className = ok
+        ? 'w-full py-3.5 rounded-2xl fc-gold-grad hover:brightness-110 text-fc-bg text-xs font-bold uppercase tracking-wider transition shadow-lg cursor-pointer'
+        : 'w-full py-3.5 rounded-2xl bg-fc-surface text-zinc-500 border border-fc-border text-xs font-bold uppercase tracking-wider transition cursor-not-allowed';
+    };
+
+    window.acceptPdFromModal = function() {
+      document.getElementById('reg-pd-consent').checked = true;
+      toggleRegSubmit();
+      closeModal('modal-pd');
+    };
+
+    window.cancelRegistration = function() {
+      pendingRegCode = null;
+      const reg = document.getElementById('screen-register');
+      reg.classList.add('hidden');
+      reg.classList.remove('flex');
+      document.getElementById('screen-auth').classList.remove('hidden');
+    };
+
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!pendingRegCode || !dbUsers[pendingRegCode]) return;
+
+      const lastName = document.getElementById('reg-last-name').value.trim();
+      const firstName = document.getElementById('reg-first-name').value.trim();
+      const middleName = document.getElementById('reg-middle-name').value.trim();
+      const phone = document.getElementById('reg-phone').value.trim();
+      let username = document.getElementById('reg-username').value.trim();
+      if (username && !username.startsWith('@')) username = '@' + username;
+
+      dbUsers[pendingRegCode] = {
+        ...dbUsers[pendingRegCode],
+        lastName,
+        firstName,
+        middleName,
+        phone,
+        username,
+        gender: selectedRegGender,
+        defaultRole: selectedRegGender === 'female' ? 'wardrobe' : 'universal',
+        pdAccepted: true,
+        registered: true
+      };
+      saveUsers();
+
+      activeCode = pendingRegCode;
+      pendingRegCode = null;
+      try { localStorage.setItem(STORE_ACTIVE, activeCode); } catch (e) {}
+
+      const reg = document.getElementById('screen-register');
+      reg.classList.add('hidden');
+      reg.classList.remove('flex');
+      haptic('success');
+      showToast(`Добро пожаловать, ${firstName}!`);
+      enterWorkspace();
+    });
+
+    function enterWorkspace() {
+      const user = dbUsers[activeCode];
+      if (!user || user.fired) {
+        logout();
+        return;
+      }
+
+      document.getElementById('screen-auth').classList.add('hidden');
+      const ws = document.getElementById('app-workspace');
+      ws.classList.remove('hidden');
+      ws.classList.add('flex');
+
+      document.getElementById('header-user-name').textContent = getFullName(user);
+      document.getElementById('header-rates-pill').textContent =
+        `${Number(dbRates.universal).toFixed(0)} / ${Number(dbRates.wardrobe).toFixed(0)} BYN`;
+
+      const badge = document.getElementById('role-badge');
+      const coordBar = document.getElementById('coordinator-bar');
+      const staffNav = document.getElementById('nav-staff-group');
+      const adminNav = document.getElementById('nav-admin-group');
+      const staffFilter = document.getElementById('staff-events-filter');
+
+      if (user.role === 'admin') {
+        badge.textContent = 'Координатор';
+        badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider fc-burgundy-grad text-fc-goldLight border border-fc-gold/50';
+        coordBar.classList.remove('hidden');
+        staffNav.classList.add('hidden');
+        adminNav.classList.remove('hidden');
+        staffFilter.classList.add('hidden');
+      } else if (user.gender === 'female') {
+        badge.textContent = 'Гардеробщица';
+        badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-fc-burgundy/40 text-rose-200 border border-fc-burgundyBright/60';
+        coordBar.classList.add('hidden');
+        staffNav.classList.remove('hidden');
+        adminNav.classList.add('hidden');
+        staffFilter.classList.remove('hidden');
+      } else {
+        badge.textContent = 'Универсал';
+        badge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-fc-gold/15 text-fc-gold border border-fc-gold/40';
+        coordBar.classList.add('hidden');
+        staffNav.classList.remove('hidden');
+        adminNav.classList.add('hidden');
+        staffFilter.classList.remove('hidden');
+      }
+
+      switchTab('events');
+    }
+
+    window.logout = function() {
+      haptic('light');
+      activeCode = null;
+      try { localStorage.removeItem(STORE_ACTIVE); } catch (e) {}
+      const ws = document.getElementById('app-workspace');
+      ws.classList.add('hidden');
+      ws.classList.remove('flex');
+      document.getElementById('screen-auth').classList.remove('hidden');
+    };
+
+    // =========================================================================
+    // 2. НАВИГАЦИЯ ПО ТАБАМ
+    // =========================================================================
+    window.switchTab = function(tab) {
+      haptic('light');
+      currentTab = tab;
+      const user = dbUsers[activeCode];
+      if (!user) return;
+
+      if (user.role === 'admin') {
+        ['events', 'team', 'finance', 'settings'].forEach(t => {
+          const b = document.getElementById(`tab-admin-${t}`);
+          if (b) b.className = `py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 transition ${t === tab ? 'text-fc-gold' : 'text-zinc-400 hover:text-white'}`;
+        });
+      } else {
+        ['events', 'timesheet', 'profile'].forEach(t => {
+          const b = document.getElementById(`tab-staff-${t}`);
+          if (b) b.className = `py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 transition ${t === tab ? 'text-fc-gold' : 'text-zinc-400 hover:text-white'}`;
+        });
+      }
+
+      ['sec-events', 'sec-timesheet', 'sec-profile', 'sec-team', 'sec-finance', 'sec-settings'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+
+      if (tab === 'timesheet') {
+        document.getElementById('sec-timesheet').classList.remove('hidden');
+        renderTimesheet();
+      } else if (tab === 'profile') {
+        document.getElementById('sec-profile').classList.remove('hidden');
+        renderProfile();
+      } else if (tab === 'team') {
+        document.getElementById('sec-team').classList.remove('hidden');
+        renderTeam();
+      } else if (tab === 'finance') {
+        document.getElementById('sec-finance').classList.remove('hidden');
+        renderFinance();
+      } else if (tab === 'settings') {
+        document.getElementById('sec-settings').classList.remove('hidden');
+        renderSettings();
+      } else {
+        document.getElementById('sec-events').classList.remove('hidden');
+        renderEvents();
+      }
+      lucide.createIcons();
+    };
+
+    function updateNavBadges() {
+      const myCount = dbEvents.filter(ev => ev.signups.some(s => s.code === activeCode)).length;
+      const fCount = document.getElementById('filter-my-count');
+      if (fCount) fCount.textContent = myCount;
+
+      const activeStaffCount = Object.values(dbUsers).filter(u => u.role !== 'admin' && !u.fired).length;
+      const bTeam = document.getElementById('badge-team-count');
+      if (bTeam) bTeam.textContent = activeStaffCount;
+    }
+
+    window.setStaffEventFilter = function(f) {
+      staffEventFilter = f;
+      haptic('light');
+      const bAll = document.getElementById('filter-ev-all');
+      const bMy = document.getElementById('filter-ev-my');
+      bAll.className = f === 'all'
+        ? 'py-1.5 rounded-lg text-xs font-bold bg-fc-gold text-fc-bg transition'
+        : 'py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition';
+      bMy.className = f === 'my'
+        ? 'py-1.5 rounded-lg text-xs font-bold bg-fc-gold text-fc-bg transition'
+        : 'py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white transition';
+      renderEvents();
+    };
+
+    // =========================================================================
+    // 3. СОЗДАНИЕ СМЕНЫ (3 ФОРМАТА + АВТОПОСТИНГ В TELEGRAM)
+    // =========================================================================
+    window.setCreateFormat = function(fmt) {
+      createFormat = fmt;
+      haptic('light');
+
+      ['both', 'universal', 'wardrobe'].forEach(key => {
+        const btn = document.getElementById(`fmt-btn-${key}`);
+        btn.className = key === fmt
+          ? 'py-2 px-1.5 rounded-lg text-[10px] font-bold transition bg-fc-gold text-fc-bg'
+          : 'py-2 px-1.5 rounded-lg text-[10px] font-bold transition text-zinc-400 hover:text-white';
+      });
+
+      const grid = document.getElementById('create-quotas-grid');
+      const boxUniv = document.getElementById('quota-box-universal');
+      const boxWard = document.getElementById('quota-box-wardrobe');
+
+      if (fmt === 'both') {
+        grid.className = 'grid grid-cols-2 gap-2.5';
+        boxUniv.classList.remove('hidden');
+        boxWard.classList.remove('hidden');
+      } else if (fmt === 'universal') {
+        grid.className = 'grid grid-cols-1';
+        boxUniv.classList.remove('hidden');
+        boxWard.classList.add('hidden');
+      } else {
+        grid.className = 'grid grid-cols-1';
+        boxUniv.classList.add('hidden');
+        boxWard.classList.remove('hidden');
+      }
+    };
+
+    window.openCreateModal = function() {
+      haptic('light');
+      document.getElementById('create-date').value = getDateOffset(2);
+      setCreateFormat('both');
+
+      const hasTg = Boolean(dbTgConfig.botToken && dbTgConfig.channelId);
+      const stEl = document.getElementById('create-tg-status');
+      const tgToggle = document.getElementById('create-tg-toggle');
+      if (hasTg) {
+        stEl.textContent = `Канал: ${dbTgConfig.channelId}`;
+        stEl.className = 'text-[10px] text-sky-400 truncate';
+        tgToggle.checked = true;
+      } else {
+        stEl.textContent = 'Токен/канал не заданы (локальный режим)';
+        stEl.className = 'text-[10px] text-zinc-500 truncate';
+        tgToggle.checked = false;
+      }
+      openModal('modal-create');
+    };
+
+    async function sendTelegramShiftAnnouncement(ev) {
+      const token = (dbTgConfig.botToken || '').trim();
+      const chatId = (dbTgConfig.channelId || '').trim();
+      if (!token || !chatId) return { sent: false, reason: 'no_creds' };
+
+      const fmt = getEventFormat(ev);
+      let slotsBlock = '';
+      if (fmt === 'universal') {
+        slotsBlock = `• Универсалы: *${ev.universalMax} мест* (${Number(dbRates.universal).toFixed(2)} BYN/ч)`;
+      } else if (fmt === 'wardrobe') {
+        slotsBlock = `• Гардероб: *${ev.wardrobeMax} мест* (${Number(dbRates.wardrobe).toFixed(2)} BYN/ч)`;
+      } else {
+        slotsBlock = `• Универсалы: *${ev.universalMax} мест* (${Number(dbRates.universal).toFixed(2)} BYN/ч)\n• Гардероб: *${ev.wardrobeMax} мест* (${Number(dbRates.wardrobe).toFixed(2)} BYN/ч)`;
+      }
+
+      const text = [
+        `🚨 *Новая смена в FALCON CLUB!*`,
+        ``,
+        `📌 *Мероприятие:* ${ev.title}`,
+        `📅 *Дата:* ${formatDateRu(ev.date)}`,
+        `🕒 *Время:* ${ev.time}`,
+        ``,
+        `👥 *Открытые позиции:*`,
+        slotsBlock,
+        ev.desc ? `\nℹ️ _${ev.desc}_` : '',
+        `\nОткройте приложение *Staff Control*, чтобы занять смену!`
+      ].filter(Boolean).join('\n');
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text,
+            parse_mode: 'Markdown'
+          })
+        });
+        const data = await res.json();
+        return { sent: Boolean(data && data.ok), reason: data?.description || 'api_error' };
+      } catch (err) {
+        return { sent: false, reason: 'network_error' };
+      }
+    }
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('create-title').value.trim();
+      const date = document.getElementById('create-date').value;
+      const time = document.getElementById('create-time').value.trim();
+      const desc = document.getElementById('create-desc').value.trim();
+      const wantBroadcast = document.getElementById('create-tg-toggle').checked;
+
+      const universalMax = createFormat === 'wardrobe'
+        ? 0
+        : (parseInt(document.getElementById('create-univ-quota').value, 10) || 1);
+      const wardrobeMax = createFormat === 'universal'
+        ? 0
+        : (parseInt(document.getElementById('create-ward-quota').value, 10) || 1);
+
+      if (!title || !date || !time) return;
+
+      const newEv = {
+        id: 'ev_' + Date.now(),
+        title,
+        date,
+        time,
+        desc,
+        format: createFormat,
+        universalMax,
+        wardrobeMax,
+        signups: []
+      };
+
+      dbEvents.unshift(newEv);
+      saveEvents();
+      document.getElementById('create-form').reset();
+      closeModal('modal-create');
+      renderEvents();
+
+      if (wantBroadcast && dbTgConfig.botToken && dbTgConfig.channelId) {
+        const tgRes = await sendTelegramShiftAnnouncement(newEv);
+        if (tgRes.sent) {
+          haptic('success');
+          showToast(`Смена создана и опубликована в ${dbTgConfig.channelId}!`);
+        } else {
+          haptic('warning');
+          showToast('Смена создана локально (ошибка отправки в Telegram)', 'error');
+        }
+      } else {
+        haptic('success');
+        showToast('Смена опубликована в приложении', 'info');
+      }
+    });
+
+    // =========================================================================
+    // 4. КАРТОЧКИ СМЕН И УМНАЯ ЗАПИСЬ
+    // =========================================================================
+    function getEventFormat(ev) {
+      if (ev.format) return ev.format;
+      if (ev.universalMax > 0 && ev.wardrobeMax === 0) return 'universal';
+      if (ev.wardrobeMax > 0 && ev.universalMax === 0) return 'wardrobe';
+      return 'both';
+    }
+
+    function renderEvents() {
+      const user = dbUsers[activeCode];
+      if (!user) return;
+      updateNavBadges();
+
+      const listEl = document.getElementById('events-list');
+      let list = [...dbEvents].sort((a, b) => a.date.localeCompare(b.date));
+      if (user.role !== 'admin' && staffEventFilter === 'my') {
+        list = list.filter(ev => ev.signups.some(s => s.code === activeCode));
+      }
+
+      if (list.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-fc-card border border-dashed border-fc-border rounded-2xl p-8 text-center">
+            <i data-lucide="calendar-off" class="w-8 h-8 text-fc-gold mx-auto mb-2"></i>
+            <h4 class="text-sm font-bold text-white">${staffEventFilter === 'my' ? 'У вас пока нет записей' : 'Нет запланированных мероприятий'}</h4>
+            <p class="text-xs text-zinc-400 mt-1">${user.role === 'admin' ? 'Нажмите «Создать», чтобы опубликовать первую смену.' : 'Ожидайте новых анонсов от координатора.'}</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      listEl.innerHTML = list.map(ev => {
+        const fmt = getEventFormat(ev);
+        const univFilled = ev.signups.filter(s => s.shiftRole === 'universal').length;
+        const wardFilled = ev.signups.filter(s => s.shiftRole === 'wardrobe').length;
+        const univLeft = Math.max(0, ev.universalMax - univFilled);
+        const wardLeft = Math.max(0, ev.wardrobeMax - wardFilled);
+
+        const mySignup = ev.signups.find(s => s.code === activeCode);
+        const urgent = isWithinTwoDays(ev.date);
+
+        let t2Banner = '';
+        if (mySignup && urgent) {
+          if (!mySignup.confirmed) {
+            t2Banner = `
+              <div class="mb-3.5 p-3 rounded-2xl fc-burgundy-grad border border-fc-gold/70 flex items-center justify-between gap-2.5 shadow-lg">
+                <div class="flex items-start gap-2 min-w-0">
+                  <i data-lucide="bell-ring" class="w-4 h-4 text-fc-gold shrink-0 mt-0.5"></i>
+                  <div>
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-fc-goldLight">Подтвердите выход на смену</div>
+                    <div class="text-[11px] text-white/90 mt-0.5">Менее 48 часов до начала мероприятия.</div>
+                  </div>
+                </div>
+                <button type="button" onclick="confirmAttendance('${ev.id}')"
+                  class="px-3 py-2 rounded-xl fc-gold-grad hover:brightness-110 text-fc-bg text-[11px] font-bold uppercase tracking-wider shrink-0 shadow">
+                  Подтвердить
+                </button>
+              </div>
+            `;
+          } else {
+            t2Banner = `
+              <div class="mb-3.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-xs text-emerald-300">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                <span>Выход на смену подтвержден</span>
+              </div>
+            `;
+          }
+        }
+
+        let slotsHtml = '';
+        if (fmt === 'universal') {
+          const pct = ev.universalMax > 0 ? Math.min(100, Math.round((univFilled / ev.universalMax) * 100)) : 0;
+          slotsHtml = `
+            <div class="mb-3.5 p-3 rounded-xl bg-fc-bg border border-fc-gold/30 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="package" class="w-4 h-4 text-fc-gold"></i>
+                  <span class="text-xs font-bold text-white">Только универсалы</span>
+                  <span class="font-num text-[11px] text-fc-gold">(${Number(dbRates.universal).toFixed(2)} BYN/ч)</span>
+                </div>
+                <span class="font-num text-xs font-bold ${univLeft === 0 ? 'text-zinc-500' : 'text-fc-gold'}">
+                  ${univFilled} / ${ev.universalMax} мест
+                </span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-fc-surface overflow-hidden">
+                <div class="h-full bg-fc-gold rounded-full transition-all" style="width:${pct}%"></div>
+              </div>
+            </div>
+          `;
+        } else if (fmt === 'wardrobe') {
+          const pct = ev.wardrobeMax > 0 ? Math.min(100, Math.round((wardFilled / ev.wardrobeMax) * 100)) : 0;
+          slotsHtml = `
+            <div class="mb-3.5 p-3 rounded-xl bg-fc-bg border border-fc-burgundyBright/40 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="shirt" class="w-4 h-4 text-rose-300"></i>
+                  <span class="text-xs font-bold text-white">Только гардероб</span>
+                  <span class="font-num text-[11px] text-rose-300">(${Number(dbRates.wardrobe).toFixed(2)} BYN/ч)</span>
+                </div>
+                <span class="font-num text-xs font-bold ${wardLeft === 0 ? 'text-zinc-500' : 'text-rose-300'}">
+                  ${wardFilled} / ${ev.wardrobeMax} мест
+                </span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-fc-surface overflow-hidden">
+                <div class="h-full bg-fc-burgundyBright rounded-full transition-all" style="width:${pct}%"></div>
+              </div>
+            </div>
+          `;
+        } else {
+          slotsHtml = `
+            <div class="grid grid-cols-2 gap-2 mb-3.5">
+              <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-bold text-zinc-200">Универсалы</div>
+                  <div class="text-[10px] text-fc-gold font-num">${Number(dbRates.universal).toFixed(2)} BYN/ч</div>
+                </div>
+                <span class="font-num text-xs font-bold ${univLeft === 0 ? 'text-zinc-500' : 'text-fc-gold'}">
+                  ${univFilled}/${ev.universalMax}
+                </span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-fc-bg border border-fc-border flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-bold text-zinc-200">Гардероб</div>
+                  <div class="text-[10px] text-rose-300 font-num">${Number(dbRates.wardrobe).toFixed(2)} BYN/ч</div>
+                </div>
+                <span class="font-num text-xs font-bold ${wardLeft === 0 ? 'text-zinc-500' : 'text-rose-300'}">
+                  ${wardFilled}/${ev.wardrobeMax}
+                </span>
+              </div>
+            </div>
+          `;
+        }
+
+        let staffControls = '';
+        if (user.role !== 'admin') {
+          if (!mySignup) {
+            const isFemale = user.gender === 'female';
+            if (isFemale && fmt === 'universal') {
+              staffControls = `
+                <div class="w-full py-2.5 px-3 rounded-xl bg-fc-bg border border-fc-border text-xs text-zinc-400 flex items-center justify-center gap-2">
+                  <i data-lucide="info" class="w-4 h-4 text-fc-gold"></i>
+                  <span>Набор только на универсалов</span>
+                </div>
+              `;
+            } else {
+              const spotsLeft = isFemale ? wardLeft : (univLeft + wardLeft);
+              const isFull = spotsLeft <= 0;
+              let btnText = 'Записаться на смену';
+              if (isFull) btnText = 'Свободных мест нет';
+              else if (isFemale || fmt === 'wardrobe') btnText = `Записаться в гардероб (${Number(dbRates.wardrobe).toFixed(2)} BYN/ч)`;
+              else if (fmt === 'universal') btnText = `Записаться универсалом (${Number(dbRates.universal).toFixed(2)} BYN/ч)`;
+              else btnText = 'Записаться (выбрать роль)';
+
+              staffControls = `
+                <button type="button" onclick="initiateSignup('${ev.id}')" ${isFull ? 'disabled' : ''}
+                  class="w-full py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-2
+                  ${isFull ? 'bg-fc-bg text-zinc-600 border border-fc-border cursor-not-allowed' : 'fc-gold-grad hover:brightness-110 text-fc-bg shadow-lg'}">
+                  <i data-lucide="${isFull ? 'lock' : 'user-plus'}" class="w-4 h-4"></i>
+                  <span>${btnText}</span>
+                </button>
+              `;
+            }
+          } else {
+            const roleName = mySignup.shiftRole === 'universal' ? 'Универсал' : (user.gender === 'female' ? 'Гардеробщица' : 'Гардеробщик');
+            const rateUsed = mySignup.shiftRole === 'universal' ? dbRates.universal : dbRates.wardrobe;
+
+            let timeBtnHtml = '';
+            if (!mySignup.checkIn) {
+              timeBtnHtml = `
+                <button type="button" onclick="trackTime('${ev.id}', 'in')"
+                  class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5 shadow">
+                  <i data-lucide="log-in" class="w-4 h-4"></i>
+                  <span>Начать смену (Check-In)</span>
+                </button>
+              `;
+            } else if (!mySignup.checkOut) {
+              timeBtnHtml = `
+                <button type="button" onclick="trackTime('${ev.id}', 'out')"
+                  class="w-full py-2.5 px-3 rounded-xl fc-burgundy-grad hover:brightness-110 border border-fc-burgundyBright text-white text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5 shadow">
+                  <i data-lucide="log-out" class="w-4 h-4 text-fc-gold"></i>
+                  <span>Завершить смену (приход ${mySignup.checkIn})</span>
+                </button>
+              `;
+            } else {
+              const dur = calcShiftDuration(mySignup.checkIn, mySignup.checkOut);
+              const earned = calcMoney(dur.minutes, mySignup.shiftRole);
+              timeBtnHtml = `
+                <div class="w-full py-2.5 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 font-bold flex items-center justify-center gap-1.5 text-center">
+                  <i data-lucide="check-check" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                  <span class="font-num">Смена сдана: ${mySignup.checkIn}–${mySignup.checkOut} (${dur.label} ≈ ${earned.toFixed(2)} BYN)</span>
+                </div>
+              `;
+            }
+
+            staffControls = `
+              <div class="w-full space-y-2">
+                <div class="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-fc-bg border border-fc-gold/30">
+                  <span class="text-zinc-300">Роль: <strong class="text-fc-gold">${roleName}</strong> <span class="font-num text-[11px] text-zinc-400">(${Number(rateUsed).toFixed(2)} BYN/ч)</span></span>
+                  <button type="button" onclick="cancelMySignup('${ev.id}')" class="text-rose-400 hover:text-rose-300 underline text-[11px]">
+                    Отменить
+                  </button>
+                </div>
+                ${timeBtnHtml}
+              </div>
+            `;
+          }
+        }
+
+        let adminControls = '';
+        if (user.role === 'admin') {
+          adminControls = `
+            <div class="flex items-center gap-2 w-full">
+              <button type="button" onclick="openKppModal('${ev.id}')"
+                class="flex-1 py-2.5 px-3.5 rounded-xl bg-fc-bg hover:bg-fc-surface border border-fc-gold/50 text-xs font-bold text-fc-gold transition flex items-center justify-center gap-1.5">
+                <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                <span>КПП и учет (${ev.signups.length})</span>
+              </button>
+              <button type="button" onclick="deleteEvent('${ev.id}')" title="Удалить смену"
+                class="p-2.5 rounded-xl bg-fc-bg hover:bg-rose-950/70 border border-fc-border hover:border-rose-700 text-zinc-400 hover:text-rose-400 transition">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <article class="bg-fc-card border ${mySignup ? 'border-fc-gold/50' : 'border-fc-border'} rounded-2xl p-4 shadow-xl">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-lg bg-fc-gold/15 border border-fc-gold/30 text-fc-gold text-[11px] font-bold">
+                  ${formatDateRu(ev.date)}
+                </span>
+                <span class="font-num px-2.5 py-1 rounded-lg bg-fc-bg border border-fc-border text-zinc-300 text-[11px] flex items-center gap-1">
+                  <i data-lucide="clock" class="w-3 h-3 text-fc-gold"></i>
+                  ${ev.time}
+                </span>
+              </div>
+              ${urgent ? `<span class="px-2 py-0.5 rounded-full bg-fc-burgundy text-fc-goldLight border border-fc-burgundyBright/60 text-[10px] font-bold uppercase">Скоро</span>` : ''}
+            </div>
+
+            <h3 class="text-sm sm:text-base font-bold text-white mb-2">${ev.title}</h3>
+
+            ${ev.desc ? `
+              <p class="text-xs text-zinc-400 bg-fc-bg/80 border border-fc-border rounded-xl p-2.5 mb-3 leading-relaxed">
+                ${ev.desc}
+              </p>
+            ` : ''}
+
+            ${t2Banner}
+            ${slotsHtml}
+
+            <div class="pt-2.5 border-t border-fc-border">
+              ${staffControls}
+              ${adminControls}
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    window.initiateSignup = function(eventId) {
+      const user = dbUsers[activeCode];
+      const ev = dbEvents.find(e => e.id === eventId);
+      if (!user || !ev || ev.signups.some(s => s.code === activeCode)) return;
+
+      const fmt = getEventFormat(ev);
+      const univLeft = Math.max(0, ev.universalMax - ev.signups.filter(s => s.shiftRole === 'universal').length);
+      const wardLeft = Math.max(0, ev.wardrobeMax - ev.signups.filter(s => s.shiftRole === 'wardrobe').length);
+
+      if (user.gender === 'female') {
+        if (fmt === 'universal' || wardLeft <= 0) {
+          haptic('error');
+          showToast('Нет доступных мест в гардеробе', 'error');
+          return;
+        }
+        finalizeSignup(eventId, 'wardrobe');
+        return;
+      }
+
+      if (fmt === 'universal') {
+        if (univLeft <= 0) { showToast('Места универсалов заняты', 'error'); return; }
+        finalizeSignup(eventId, 'universal');
+        return;
+      }
+      if (fmt === 'wardrobe') {
+        if (wardLeft <= 0) { showToast('Места в гардеробе заняты', 'error'); return; }
+        finalizeSignup(eventId, 'wardrobe');
+        return;
+      }
+
+      pendingPickEventId = eventId;
+      document.getElementById('pick-event-title').textContent = `${ev.title} • ${formatDateRu(ev.date)}`;
+      document.getElementById('pick-rate-univ').textContent = `${Number(dbRates.universal).toFixed(2)} BYN/ч`;
+      document.getElementById('pick-rate-ward').textContent = `${Number(dbRates.wardrobe).toFixed(2)} BYN/ч`;
+      document.getElementById('pick-left-univ').textContent = univLeft > 0 ? `${univLeft} мест` : 'Занято';
+      document.getElementById('pick-left-ward').textContent = wardLeft > 0 ? `${wardLeft} мест` : 'Занято';
+
+      const bUniv = document.getElementById('pick-btn-universal');
+      const bWard = document.getElementById('pick-btn-wardrobe');
+      bUniv.disabled = univLeft <= 0;
+      bWard.disabled = wardLeft <= 0;
+      bUniv.classList.toggle('opacity-40', univLeft <= 0);
+      bWard.classList.toggle('opacity-40', wardLeft <= 0);
+
+      openModal('modal-pick-role');
+    };
+
+    window.confirmMaleRoleSignup = function(role) {
+      if (!pendingPickEventId) return;
+      const id = pendingPickEventId;
+      pendingPickEventId = null;
+      closeModal('modal-pick-role');
+      finalizeSignup(id, role);
+    };
+
+    function finalizeSignup(eventId, shiftRole) {
+      const ev = dbEvents.find(e => e.id === eventId);
+      if (!ev) return;
+      ev.signups.push({
+        code: activeCode,
+        shiftRole,
+        confirmed: isWithinTwoDays(ev.date),
+        checkIn: null,
+        checkOut: null
+      });
+      saveEvents();
+      haptic('success');
+      showToast(shiftRole === 'universal' ? 'Вы записаны универсалом!' : 'Вы записаны в гардероб!');
+      renderEvents();
+    }
+
+    window.confirmAttendance = function(eventId) {
+      const ev = dbEvents.find(e => e.id === eventId);
+      if (!ev) return;
+      const s = ev.signups.find(x => x.code === activeCode);
+      if (s) {
+        s.confirmed = true;
+        saveEvents();
+        haptic('success');
+        showToast('Выход на смену подтвержден!');
+        renderEvents();
+      }
+    };
+
+    window.trackTime = function(eventId, dir) {
+      const ev = dbEvents.find(e => e.id === eventId);
+      if (!ev) return;
+      const s = ev.signups.find(x => x.code === activeCode);
+      if (!s) return;
+
+      const now = new Date();
+      const stamp = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (dir === 'in') {
+        s.checkIn = stamp;
+        s.confirmed = true;
+        haptic('success');
+        showToast(`Смена начата в ${stamp}`);
+      } else {
+        s.checkOut = stamp;
+        haptic('success');
+        showToast(`Смена завершена в ${stamp}. Начисление обновлено!`);
+      }
+      saveEvents();
+      renderEvents();
+    };
+
+    window.cancelMySignup = function(eventId) {
+      askConfirm('Отменить запись?', 'Ваше место освободится для команды.', () => {
+        const ev = dbEvents.find(e => e.id === eventId);
+        if (!ev) return;
+        ev.signups = ev.signups.filter(s => s.code !== activeCode);
+        saveEvents();
+        haptic('success');
+        showToast('Запись отменена');
+        renderEvents();
+      });
+    };
+
+    window.deleteEvent = function(eventId) {
+      askConfirm('Удалить мероприятие?', 'Смена и все записи по ней будут удалены.', () => {
+        dbEvents = dbEvents.filter(e => e.id !== eventId);
+        saveEvents();
+        haptic('success');
+        showToast('Мероприятие удалено');
+        renderEvents();
+      });
+    };
+
+    // =========================================================================
+    // 5. МОЙ ТАБЕЛЬ И ПРОФИЛЬ (СОТРУДНИК)
+    // =========================================================================
+    function getPayrollForUser(userCode) {
+      const u = dbUsers[userCode];
+      const history = [];
+      const sorted = [...dbEvents].sort((a, b) => b.date.localeCompare(a.date));
+
+      let totalMin = 0;
+      let basePay = 0;
+      let completedCount = 0;
+
+      sorted.forEach(ev => {
+        const s = ev.signups.find(x => x.code === userCode);
+        if (s) {
+          const dur = calcShiftDuration(s.checkIn, s.checkOut);
+          const rate = s.shiftRole === 'universal' ? Number(dbRates.universal || 0) : Number(dbRates.wardrobe || 0);
+          const pay = (s.checkIn && s.checkOut) ? (dur.minutes / 60) * rate : 0;
+
+          if (s.checkIn && s.checkOut) {
+            completedCount++;
+            totalMin += dur.minutes;
+            basePay += pay;
+          }
+
+          history.push({
+            eventId: ev.id,
+            title: ev.title,
+            date: ev.date,
+            time: ev.time,
+            shiftRole: s.shiftRole,
+            rate,
+            checkIn: s.checkIn,
+            checkOut: s.checkOut,
+            durLabel: dur.label,
+            pay
+          });
+        }
+      });
+
+      const bonus = u ? Number(u.bonusAmount || 0) : 0;
+      const finalPay = Math.max(0, basePay + bonus);
+
+      return {
+        history,
+        completedCount,
+        totalMin,
+        basePay,
+        bonus,
+        bonusNote: u ? (u.bonusNote || '') : '',
+        finalPay
+      };
+    }
+
+    function renderTimesheet() {
+      const p = getPayrollForUser(activeCode);
+      document.getElementById('ts-rates-info').textContent =
+        `${Number(dbRates.universal).toFixed(2)} / ${Number(dbRates.wardrobe).toFixed(2)} BYN/ч`;
+      document.getElementById('ts-stat-shifts').textContent = p.completedCount;
+      document.getElementById('ts-stat-hours').textContent = formatMinutes(p.totalMin);
+      document.getElementById('ts-stat-pay').textContent = p.finalPay.toFixed(2);
+
+      const bonusBanner = document.getElementById('ts-bonus-banner');
+      if (p.bonus !== 0) {
+        const sign = p.bonus > 0 ? '+' : '';
+        bonusBanner.classList.remove('hidden');
+        bonusBanner.innerHTML = `
+          <span>Корректировка координатора${p.bonusNote ? ' (' + p.bonusNote + ')' : ''}:</span>
+          <strong class="font-num ${p.bonus > 0 ? 'text-emerald-400' : 'text-rose-400'}">${sign}${p.bonus.toFixed(2)} BYN</strong>
+        `;
+      } else {
+        bonusBanner.classList.add('hidden');
+      }
+
+      const listEl = document.getElementById('ts-history-list');
+      if (p.history.length === 0) {
+        listEl.innerHTML = `<div class="p-5 text-center text-xs text-zinc-500 bg-fc-bg rounded-xl border border-dashed border-fc-border">Нет записей на смены</div>`;
+        return;
+      }
+
+      listEl.innerHTML = p.history.map(item => {
+        const rName = item.shiftRole === 'universal' ? 'Универсал' : 'Гардероб';
+        const status = item.checkOut
+          ? `<span class="font-num px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">+${item.pay.toFixed(2)} BYN</span>`
+          : item.checkIn
+          ? `<span class="font-num px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px] font-bold">На смене с ${item.checkIn}</span>`
+          : `<span class="px-2 py-0.5 rounded bg-fc-gold/15 text-fc-gold text-[10px] font-bold">Запланирована</span>`;
+
+        return `
+          <div class="p-3 rounded-xl bg-fc-bg border border-fc-border space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-fc-gold">${formatDateRu(item.date)}</span>
+              ${status}
+            </div>
+            <div class="text-xs font-bold text-white">${item.title}</div>
+            <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1.5 border-t border-fc-border/60">
+              <span>${rName} • <span class="font-num">${item.rate.toFixed(2)} BYN/ч</span></span>
+              <span class="font-num">${item.checkIn || '—'} – ${item.checkOut || '—'} (<strong class="text-fc-gold">${item.durLabel}</strong>)</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderProfile() {
+      const user = dbUsers[activeCode];
+      if (!user) return;
+      document.getElementById('prof-avatar').textContent = getInitials(user);
+      document.getElementById('prof-fullname').textContent = getFullName(user);
+      document.getElementById('prof-username').textContent = user.username || '@staff';
+      document.getElementById('prof-code').textContent = user.code;
+      document.getElementById('prof-phone-input').value = user.phone || '';
+
+      const roleTag = document.getElementById('prof-role-tag');
+      if (user.gender === 'female') {
+        roleTag.textContent = 'Гардеробщица';
+        roleTag.className = 'text-rose-300 font-bold';
+      } else {
+        roleTag.textContent = 'Универсал / Гардеробщик';
+        roleTag.className = 'text-emerald-400 font-bold';
+      }
+    }
+
+    window.copyMyCode = function() {
+      if (!activeCode) return;
+      copyText(activeCode, `Ваш код ${activeCode} скопирован`);
+    };
+
+    document.getElementById('prof-phone-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const user = dbUsers[activeCode];
+      if (!user) return;
+      user.phone = document.getElementById('prof-phone-input').value.trim();
+      saveUsers();
+      haptic('success');
+      showToast('Телефон сохранен');
+    });
+
+    // =========================================================================
+    // 6. КОМАНДА, УВОЛЬНЕНИЯ И АРХИВ (КООРДИНАТОР)
+    // =========================================================================
+    function generateUniqueCode() {
+      let c;
+      do { c = String(Math.floor(1000 + Math.random() * 9000)); } while (dbUsers[c]);
+      return c;
+    }
+
+    window.openInviteModal = function() {
+      haptic('light');
+      document.getElementById('inv-code').value = generateUniqueCode();
+      document.getElementById('inv-note').value = '';
+      document.getElementById('inv-gender').value = 'male';
+      openModal('modal-invite');
+    };
+
+    window.regenerateInviteCode = function() {
+      haptic('light');
+      document.getElementById('inv-code').value = generateUniqueCode();
+    };
+
+    document.getElementById('invite-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = document.getElementById('inv-code').value.trim();
+      const note = document.getElementById('inv-note').value.trim();
+      const gender = document.getElementById('inv-gender').value;
+      if (!code || !note) return;
+      if (dbUsers[code]) {
+        showToast('Такой код уже занят', 'error');
+        return;
+      }
+
+      dbUsers[code] = {
+        code,
+        role: 'staff',
+        gender,
+        defaultRole: gender === 'female' ? 'wardrobe' : 'universal',
+        note,
+        lastName: '',
+        firstName: '',
+        middleName: '',
+        username: '',
+        phone: '',
+        pdAccepted: false,
+        registered: false,
+        fired: false,
+        bonusAmount: 0,
+        bonusNote: ''
+      };
+      saveUsers();
+      closeModal('modal-invite');
+      haptic('success');
+      showToast(`Инвайт-код ${code} создан!`);
+      renderTeam();
+    });
+
+    window.copyInvite = function(code) {
+      const txt = `FALCON CLUB • Staff Control\nВаш персональный инвайт-код: ${code}\nВведите код при первом входе, укажите ФИО и примите согласие на обработку ПД.`;
+      copyText(txt, `Приглашение с кодом ${code} скопировано!`);
+    };
+
+    window.fireStaffMember = function(code) {
+      const u = dbUsers[code];
+      if (!u) return;
+      askConfirm(
+        `Уволить сотрудника?`,
+        `${getFullName(u)} (код ${code}) будет перемещён в архив уволенных, а его вход в систему заблокирован. История смен и расчёты сохранятся.`,
+        () => {
+          u.fired = true;
+          saveUsers();
+          haptic('success');
+          showToast('Сотрудник уволен и перенесён в архив');
+          renderTeam();
+        }
+      );
+    };
+
+    window.restoreStaffMember = function(code) {
+      const u = dbUsers[code];
+      if (!u) return;
+      u.fired = false;
+      saveUsers();
+      haptic('success');
+      showToast(`Доступ для ${getFullName(u)} восстановлен!`);
+      renderTeam();
+    };
+
+    window.toggleArchiveSection = function() {
+      archiveExpanded = !archiveExpanded;
+      const list = document.getElementById('team-archived-list');
+      const chev = document.getElementById('archive-chevron');
+      list.classList.toggle('hidden', !archiveExpanded);
+      chev.style.transform = archiveExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+    };
+
+    function renderTeam() {
+      updateNavBadges();
+      const activeListEl = document.getElementById('team-active-list');
+      const archivedWrapper = document.getElementById('team-archived-wrapper');
+      const archivedListEl = document.getElementById('team-archived-list');
+
+      const allStaff = Object.values(dbUsers).filter(u => u.role !== 'admin');
+      const activeStaff = allStaff.filter(u => !u.fired);
+      const firedStaff = allStaff.filter(u => u.fired);
+
+      if (activeStaff.length === 0) {
+        activeListEl.innerHTML = `
+          <div class="bg-fc-card border border-dashed border-fc-border rounded-2xl p-8 text-center">
+            <i data-lucide="users" class="w-8 h-8 text-fc-gold mx-auto mb-2"></i>
+            <h4 class="text-sm font-bold text-white">Сотрудники пока не добавлены</h4>
+            <p class="text-xs text-zinc-400 mt-1">Нажмите «+ Выдать код», чтобы создать инвайт для нового сотрудника.</p>
+          </div>
+        `;
+      } else {
+        activeListEl.innerHTML = activeStaff.map(st => {
+          const p = getPayrollForUser(st.code);
+          const isFemale = st.gender === 'female';
+          const roleTag = isFemale
+            ? `<span class="px-2 py-0.5 rounded bg-fc-burgundy/40 text-rose-200 text-[10px] font-bold">Гардеробщица</span>`
+            : `<span class="px-2 py-0.5 rounded bg-fc-gold/15 text-fc-gold text-[10px] font-bold">Универсал / Гардероб</span>`;
+
+          const regTag = st.registered
+            ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">ПД ОК</span>`
+            : `<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px] font-bold">Ожидает рег.</span>`;
+
+          return `
+            <div class="bg-fc-card border border-fc-border hover:border-fc-gold/50 rounded-2xl p-3.5 shadow-lg space-y-2.5 transition">
+              <div onclick="openDossier('${st.code}')" class="cursor-pointer flex items-start justify-between gap-2.5 group">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-10 h-10 rounded-2xl fc-burgundy-grad border border-fc-gold/40 flex items-center justify-center text-fc-gold font-bold text-xs shrink-0">
+                    ${getInitials(st)}
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-white group-hover:text-fc-gold underline decoration-fc-gold/40 truncate">
+                      ${getFullName(st)}
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      ${roleTag}
+                      <span class="font-num text-[11px] text-zinc-400">• ${formatMinutes(p.totalMin)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  ${regTag}
+                  <div class="font-num text-xs font-bold text-emerald-400 mt-1">${p.finalPay.toFixed(2)} BYN</div>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-fc-border flex items-center justify-between text-xs gap-2">
+                <span class="text-zinc-400 font-num">Код: <strong class="text-fc-gold">${st.code}</strong></span>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" onclick="copyInvite('${st.code}')"
+                    class="px-2.5 py-1.5 rounded-lg bg-fc-bg hover:bg-fc-surface border border-fc-border text-[11px] text-fc-gold flex items-center gap-1">
+                    <i data-lucide="copy" class="w-3 h-3"></i>
+                    <span>Инвайт</span>
+                  </button>
+                  <button type="button" onclick="fireStaffMember('${st.code}')"
+                    class="px-2.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/70 border border-rose-800/60 text-[11px] font-bold text-rose-300 flex items-center gap-1">
+                    <i data-lucide="user-x" class="w-3 h-3"></i>
+                    <span>Уволить</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (firedStaff.length > 0) {
+        archivedWrapper.classList.remove('hidden');
+        document.getElementById('archived-count').textContent = firedStaff.length;
+        archivedListEl.innerHTML = firedStaff.map(st => {
+          const p = getPayrollForUser(st.code);
+          return `
+            <div class="bg-fc-card/70 border border-rose-950 rounded-2xl p-3.5 space-y-2">
+              <div onclick="openDossier('${st.code}')" class="cursor-pointer flex items-center justify-between gap-2 group">
+                <div class="min-w-0">
+                  <div class="text-xs font-bold text-zinc-300 group-hover:text-fc-gold underline truncate">${getFullName(st)}</div>
+                  <div class="text-[11px] text-zinc-500 font-num mt-0.5">Код: ${st.code} • ${formatMinutes(p.totalMin)} • ${p.finalPay.toFixed(2)} BYN</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 text-[10px] font-bold shrink-0">Уволен</span>
+              </div>
+              <div class="pt-2 border-t border-fc-border/60 flex justify-end">
+                <button type="button" onclick="restoreStaffMember('${st.code}')"
+                  class="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-700/60 text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                  <span>Восстановить</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        archivedWrapper.classList.add('hidden');
+      }
+
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // 7. КПП, ДОСЬЕ, ФИНАНСЫ И НАСТРОЙКИ (КООРДИНАТОР)
+    // =========================================================================
+    window.openKppModal = function(eventId) {
+      const ev = dbEvents.find(e => e.id === eventId);
+      if (!ev) return;
+      currentKppEventId = eventId;
+      haptic('light');
+
+      document.getElementById('kpp-subtitle').textContent = `${ev.title} • ${formatDateRu(ev.date)} (${ev.time})`;
+      const listEl = document.getElementById('kpp-list');
+
+      if (ev.signups.length === 0) {
+        listEl.innerHTML = `<div class="p-5 text-center text-xs text-zinc-500 bg-fc-bg rounded-xl border border-dashed border-fc-border">Записей пока нет</div>`;
+      } else {
+        listEl.innerHTML = ev.signups.map((s, idx) => {
+          const st = dbUsers[s.code];
+          const fullName = st ? getFullName(st) : s.code;
+          const isWard = s.shiftRole === 'wardrobe';
+          const roleBadge = isWard
+            ? `<span class="px-2 py-0.5 rounded bg-fc-burgundy/40 text-rose-200 text-[10px] font-bold">Гардероб</span>`
+            : `<span class="px-2 py-0.5 rounded bg-fc-gold/15 text-fc-gold text-[10px] font-bold">Универсал</span>`;
+
+          const dur = calcShiftDuration(s.checkIn, s.checkOut);
+          const pay = (s.checkIn && s.checkOut) ? calcMoney(dur.minutes, s.shiftRole) : 0;
+
+          return `
+            <div onclick="openDossier('${s.code}')"
+              class="cursor-pointer p-3 rounded-xl bg-fc-bg hover:bg-fc-surface border border-fc-border hover:border-fc-gold/60 space-y-1.5 transition group">
+              <div class="flex items-center justify-between gap-2">
+                <div class="text-xs font-bold text-white group-hover:text-fc-gold underline decoration-fc-gold/40">
+                  ${idx + 1}. ${fullName}
+                </div>
+                ${roleBadge}
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-fc-border/60">
+                <div>${s.confirmed ? '<span class="text-emerald-400 font-bold">Подтвержден</span>' : '<span class="text-amber-400">Ждет подтверждения</span>'}</div>
+                <div class="font-num">
+                  <span>${s.checkIn || '—'} – ${s.checkOut || '—'}</span>
+                  ${s.checkOut ? `<strong class="text-emerald-400 ml-1.5">(${pay.toFixed(2)} BYN)</strong>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      openModal('modal-kpp');
+    };
+
+    window.copyKppReport = function() {
+      const ev = dbEvents.find(e => e.id === currentKppEventId);
+      if (!ev) return;
+      const fmt = getEventFormat(ev);
+      const univ = ev.signups.filter(s => s.shiftRole === 'universal');
+      const ward = ev.signups.filter(s => s.shiftRole === 'wardrobe');
+
+      let out = `FALCON CLUB • СПИСОК ДЛЯ КПП (ГПХ)\n`;
+      out += `Мероприятие: ${ev.title}\n`;
+      out += `Дата и время: ${formatDateRu(ev.date)}, ${ev.time}\n\n`;
+
+      if (fmt !== 'wardrobe') {
+        out += `УНИВЕРСАЛЫ [${univ.length}/${ev.universalMax}]:\n`;
+        if (univ.length === 0) out += `— Нет записей\n`;
+        else univ.forEach((s, i) => {
+          const st = dbUsers[s.code];
+          out += `${i + 1}. ${st ? getFullName(st) : s.code} | Тел: ${st?.phone || '—'} | Приход: ${s.checkIn || '—'} / Уход: ${s.checkOut || '—'}\n`;
+        });
+        out += `\n`;
+      }
+
+      if (fmt !== 'universal') {
+        out += `ГАРДЕРОБ [${ward.length}/${ev.wardrobeMax}]:\n`;
+        if (ward.length === 0) out += `— Нет записей\n`;
+        else ward.forEach((s, i) => {
+          const st = dbUsers[s.code];
+          out += `${i + 1}. ${st ? getFullName(st) : s.code} | Тел: ${st?.phone || '—'} | Приход: ${s.checkIn || '—'} / Уход: ${s.checkOut || '—'}\n`;
+        });
+      }
+
+      copyText(out.trim(), 'Список ФИО для КПП скопирован!');
+    };
+
+    window.openDossier = function(userCode) {
+      const admin = dbUsers[activeCode];
+      if (!admin || admin.role !== 'admin') return;
+      const st = dbUsers[userCode];
+      if (!st) return;
+
+      currentDossierCode = userCode;
+      haptic('light');
+
+      const p = getPayrollForUser(userCode);
+      document.getElementById('dos-avatar').textContent = getInitials(st);
+      document.getElementById('dos-name').textContent = getFullName(st);
+      document.getElementById('dos-meta').innerHTML = `
+        <span class="text-fc-gold font-bold">${st.username || 'код ' + st.code}</span>
+        <span>•</span>
+        <span class="font-num">${st.phone || 'без телефона'}</span>
+        ${st.fired ? '<span class="px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 text-[10px] font-bold">Уволен</span>' : ''}
+      `;
+
+      document.getElementById('dos-hours').textContent = formatMinutes(p.totalMin);
+      document.getElementById('dos-base-pay').textContent = `${p.basePay.toFixed(2)} BYN`;
+      document.getElementById('dos-final-pay').textContent = `${p.finalPay.toFixed(2)} BYN`;
+
+      document.getElementById('dos-bonus-val').value = st.bonusAmount || 0;
+      document.getElementById('dos-bonus-note').value = st.bonusNote || '';
+
+      const histEl = document.getElementById('dos-history-list');
+      if (p.history.length === 0) {
+        histEl.innerHTML = `<div class="p-5 text-center text-xs text-zinc-500 bg-fc-bg rounded-xl border border-dashed border-fc-border">Нет записей на смены</div>`;
+      } else {
+        histEl.innerHTML = p.history.map(h => {
+          const rLabel = h.shiftRole === 'universal' ? 'Универсал' : 'Гардероб';
+          return `
+            <div class="p-3 rounded-xl bg-fc-bg border border-fc-border space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="text-[11px] font-bold text-fc-gold">${formatDateRu(h.date)} • ${rLabel} (${h.rate.toFixed(2)} BYN/ч)</div>
+                  <div class="text-xs font-bold text-white mt-0.5">${h.title}</div>
+                </div>
+                <div class="text-right font-num shrink-0">
+                  <div class="text-xs font-bold text-emerald-400">${h.pay.toFixed(2)} BYN</div>
+                  <div class="text-[10px] text-zinc-400">${h.durLabel}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-12 gap-2 items-end pt-2 border-t border-fc-border/60">
+                <div class="col-span-4">
+                  <label class="block text-[10px] text-zinc-400 mb-0.5">Приход</label>
+                  <input type="text" id="dos-in-${h.eventId}" value="${h.checkIn || ''}" placeholder="17:30" maxlength="5"
+                    class="w-full px-2 py-1.5 rounded-lg bg-fc-card border border-fc-border font-num text-xs text-white text-center focus:outline-none focus:border-fc-gold" />
+                </div>
+                <div class="col-span-4">
+                  <label class="block text-[10px] text-zinc-400 mb-0.5">Уход</label>
+                  <input type="text" id="dos-out-${h.eventId}" value="${h.checkOut || ''}" placeholder="23:30" maxlength="5"
+                    class="w-full px-2 py-1.5 rounded-lg bg-fc-card border border-fc-border font-num text-xs text-white text-center focus:outline-none focus:border-fc-gold" />
+                </div>
+                <div class="col-span-4">
+                  <button type="button" onclick="saveDossierShiftTime('${h.eventId}', '${userCode}')"
+                    class="w-full py-1.5 px-2 rounded-lg fc-gold-grad hover:brightness-110 text-fc-bg text-[10px] font-bold uppercase">
+                    Обновить
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      openModal('modal-dossier');
+    };
+
+    window.saveDossierBonus = function() {
+      if (!currentDossierCode || !dbUsers[currentDossierCode]) return;
+      dbUsers[currentDossierCode].bonusAmount = parseFloat(document.getElementById('dos-bonus-val').value) || 0;
+      dbUsers[currentDossierCode].bonusNote = document.getElementById('dos-bonus-note').value.trim();
+      saveUsers();
+      haptic('success');
+      showToast('Корректировка сохранена');
+      openDossier(currentDossierCode);
+      if (currentTab === 'team') renderTeam();
+      if (currentTab === 'finance') renderFinance();
+    };
+
+    window.saveDossierShiftTime = function(eventId, userCode) {
+      const inVal = document.getElementById(`dos-in-${eventId}`).value.trim();
+      const outVal = document.getElementById(`dos-out-${eventId}`).value.trim();
+      const rx = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+      if ((inVal && !rx.test(inVal)) || (outVal && !rx.test(outVal))) {
+        haptic('error');
+        showToast('Формат времени: ЧЧ:ММ (например 17:30)', 'error');
+        return;
+      }
+
+      const ev = dbEvents.find(e => e.id === eventId);
+      if (!ev) return;
+      const s = ev.signups.find(x => x.code === userCode);
+      if (!s) return;
+
+      s.checkIn = inVal || null;
+      s.checkOut = outVal || null;
+      if (s.checkIn) s.confirmed = true;
+      saveEvents();
+
+      haptic('success');
+      showToast('Время смены обновлено');
+      openDossier(userCode);
+      renderEvents();
+      if (currentTab === 'team') renderTeam();
+      if (currentTab === 'finance') renderFinance();
+      if (currentKppEventId === eventId) openKppModal(eventId);
+    };
+
+    window.copyDossierReport = function() {
+      if (!currentDossierCode) return;
+      const st = dbUsers[currentDossierCode];
+      if (!st) return;
+      const p = getPayrollForUser(currentDossierCode);
+
+      let txt = `FALCON CLUB • ТАБЕЛЬ И РАСЧЁТ\n`;
+      txt += `ФИО: ${getFullName(st)}\n`;
+      txt += `Телефон: ${st.phone || '—'} | ${st.username || '—'}\n`;
+      txt += `Время: ${formatMinutes(p.totalMin)} (${p.completedCount} см.)\n`;
+      if (p.bonus !== 0) txt += `Корректировка: ${p.bonus > 0 ? '+' : ''}${p.bonus.toFixed(2)} BYN (${p.bonusNote || '—'})\n`;
+      txt += `ИТОГО К ВЫПЛАТЕ: ${p.finalPay.toFixed(2)} BYN\n\n`;
+
+      p.history.forEach((h, i) => {
+        const r = h.shiftRole === 'universal' ? 'Универсал' : 'Гардероб';
+        txt += `${i + 1}. ${formatDateRu(h.date)} — ${h.title} [${r}]\n`;
+        txt += `   ${h.checkIn || '—'}–${h.checkOut || '—'} | ${h.durLabel} (${h.pay.toFixed(2)} BYN)\n`;
+      });
+
+      copyText(txt, 'Табель и расчёт скопированы!');
+    };
+
+    function renderFinance() {
+      const staff = Object.values(dbUsers).filter(u => u.role !== 'admin');
+      let fund = 0;
+
+      const listEl = document.getElementById('finance-payroll-list');
+      if (staff.length === 0) {
+        listEl.innerHTML = `<div class="p-5 text-center text-xs text-zinc-500 bg-fc-bg rounded-xl border border-dashed border-fc-border">Нет данных для расчёта выплат</div>`;
+      } else {
+        listEl.innerHTML = staff.map(st => {
+          const p = getPayrollForUser(st.code);
+          fund += p.finalPay;
+          const corr = p.bonus !== 0
+            ? `<span class="font-num text-[10px] ${p.bonus > 0 ? 'text-emerald-400' : 'text-rose-400'}">(${p.bonus > 0 ? '+' : ''}${p.bonus.toFixed(2)} BYN)</span>`
+            : '';
+          const firedTag = st.fired ? `<span class="text-[10px] text-rose-400 ml-1">[Архив]</span>` : '';
+
+          return `
+            <div onclick="openDossier('${st.code}')"
+              class="cursor-pointer p-3 rounded-xl bg-fc-bg hover:bg-fc-surface border border-fc-border hover:border-fc-gold/50 flex items-center justify-between gap-2.5 transition group">
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-white group-hover:text-fc-gold underline decoration-fc-gold/40 truncate">
+                  ${getFullName(st)}${firedTag}
+                </div>
+                <div class="text-[11px] text-zinc-400 mt-0.5 font-num">
+                  ${formatMinutes(p.totalMin)} (${p.completedCount} см.) ${corr}
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="font-num text-xs sm:text-sm font-bold text-emerald-400">${p.finalPay.toFixed(2)} BYN</div>
+                <div class="text-[10px] text-zinc-500">Табель →</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('finance-total-fund').textContent = `${fund.toFixed(2)} BYN`;
+    }
+
+    window.copyPayrollReport = function() {
+      const staff = Object.values(dbUsers).filter(u => u.role !== 'admin');
+      let fund = 0;
+      let txt = `FALCON CLUB • ВЕДОМОСТЬ ВЫПЛАТ\n`;
+      txt += `Ставки: Универсал ${Number(dbRates.universal).toFixed(2)} BYN/ч | Гардероб ${Number(dbRates.wardrobe).toFixed(2)} BYN/ч\n\n`;
+
+      staff.forEach((st, idx) => {
+        const p = getPayrollForUser(st.code);
+        fund += p.finalPay;
+        txt += `${idx + 1}. ${getFullName(st)} (${st.phone || '—'})\n`;
+        txt += `   Время: ${formatMinutes(p.totalMin)} (${p.completedCount} см.) -> ${p.finalPay.toFixed(2)} BYN\n`;
+      });
+
+      txt += `\nИТОГО ФОНД: ${fund.toFixed(2)} BYN`;
+      copyText(txt, 'Ведомость выплат скопирована!');
+    };
+
+    function renderSettings() {
+      document.getElementById('rate-univ-input').value = Number(dbRates.universal || 0).toFixed(2);
+      document.getElementById('rate-ward-input').value = Number(dbRates.wardrobe || 0).toFixed(2);
+      document.getElementById('tg-bot-token').value = dbTgConfig.botToken || '';
+      document.getElementById('tg-channel-id').value = dbTgConfig.channelId || '';
+    }
+
+    document.getElementById('rates-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const u = parseFloat(document.getElementById('rate-univ-input').value);
+      const w = parseFloat(document.getElementById('rate-ward-input').value);
+      if (isNaN(u) || isNaN(w) || u < 0 || w < 0) return;
+
+      dbRates = { universal: u, wardrobe: w };
+      saveRates();
+      document.getElementById('header-rates-pill').textContent = `${u.toFixed(0)} / ${w.toFixed(0)} BYN`;
+      haptic('success');
+      showToast(`Ставки обновлены: ${u.toFixed(2)} / ${w.toFixed(2)} BYN`);
+    });
+
+    document.getElementById('tg-settings-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      dbTgConfig = {
+        botToken: document.getElementById('tg-bot-token').value.trim(),
+        channelId: document.getElementById('tg-channel-id').value.trim()
+      };
+      saveTgConfig();
+      haptic('success');
+      showToast('Настройки Telegram сохранены!');
+    });
+
+    window.resetDatabase = function() {
+      askConfirm(
+        'Очистить локальную базу?',
+        'Все смены и сотрудники будут удалены, останется только аккаунт координатора (7777).',
+        () => {
+          dbUsers = initDefaultUsers();
+          dbEvents = initDefaultEvents();
+          dbRates = { universal: 12.0, wardrobe: 9.0 };
+          saveUsers();
+          saveEvents();
+          saveRates();
+          document.getElementById('header-rates-pill').textContent = '12 / 9 BYN';
+          haptic('success');
+          showToast('База очищена');
+          switchTab('events');
+        }
+      );
+    };
+
+    function copyText(text, successMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        haptic('success');
+        showToast(successMsg);
+      } catch (e) {
+        haptic('error');
+        showToast('Не удалось скопировать', 'error');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function openModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+      lucide.createIcons({ nodes: [el] });
+    }
+
+    window.closeModal = function(id) {
+      const el = document.getElementById(id);
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    };
+
+    // =========================================================================
+    // ИНИЦИАЛИЗАЦИЯ
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+          if (tg.setHeaderColor) tg.setHeaderColor('#14171D');
+          if (tg.setBackgroundColor) tg.setBackgroundColor('#0B0D10');
+        } catch (e) {}
+      }
+
+      loadState();
+      lucide.createIcons();
+
+      try {
+        const saved = localStorage.getItem(STORE_ACTIVE);
+        if (saved && dbUsers[saved] && !dbUsers[saved].fired && (dbUsers[saved].registered || dbUsers[saved].role === 'admin')) {
+          activeCode = saved;
+          enterWorkspace();
+        }
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>
